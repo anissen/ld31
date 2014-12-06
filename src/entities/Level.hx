@@ -17,7 +17,6 @@ import structures.LetterFrequencies;
 import structures.LevelGrid;
 
 enum Direction {
-    None;
     Up;
     Down;
     Left;
@@ -96,7 +95,7 @@ class Level extends Entity {
         var startY = 3;
         cursor = new Visual({
             pos: new Vector((startX + 0.5) * tileSize, (startY + 0.5) * tileSize),
-            color: new ColorHSV(30, 0.7, 1), 
+            color: new ColorHSV(30, 0.7, 1, 0.5), 
             geometry: Luxe.draw.ngon({
                 sides: 3,
                 r: tileSize / 2,
@@ -105,7 +104,7 @@ class Level extends Entity {
             })
         });
         trace(cursor.geometry.vertices);
-        cursor.geometry.vertices[2].color = new ColorHSV(60, 0.7, 1);
+        cursor.geometry.vertices[2].color = new ColorHSV(60, 0.7, 1, 0.8);
     }
 
     function getRandomLetter() :String {
@@ -157,7 +156,6 @@ class Level extends Entity {
     function setDirection(_direction :Direction) {
         direction = _direction;
         var angle = switch (direction) {
-            case None:  0;
             case Up:    -90;
             case Down:  90;
             case Left:  180;
@@ -169,6 +167,12 @@ class Level extends Entity {
 
     function enterLetter(letter :String) {
         currentWord += letter;
+        cursor.pos.add(switch (direction) {
+            case Up:    new Vector(0, -tileSize);
+            case Down:  new Vector(0, tileSize);
+            case Left:  new Vector(-tileSize, 0);
+            case Right: new Vector(tileSize, 0);
+        });
         trace('enterLetter: $currentWord');
     }
 
