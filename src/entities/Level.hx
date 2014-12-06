@@ -230,17 +230,18 @@ class Level extends Entity {
         var letter = getRandomLetter();
         var charCode = letter.charCodeAt(0) - "A".charCodeAt(0);
         var textColor = new ColorHSV(charCode * 10, 0.1, 1);
+        var borderColor = new Vector(0, 0, 0, 1);
         var isVowel = (['A', 'E', 'I', 'J', 'O', 'Q', 'U', 'Y'].indexOf(letter) > -1);
-        // if (isVowel) {
-        //     textColor.h = 0;
-        //     textColor.s = 0.5;
-        // }
+        if (isVowel) {
+            borderColor = new Vector(0.6, 0, 0, 1);
+        }
         return new Letter({
             pos: grid.getPos(tilesX + 1, tilesY),
             color: new ColorHSV(charCode * 10, 0.6, 1),
             r: tileSize / 2,
             letter: letter,
-            textColor: textColor
+            textColor: textColor,
+            borderColor: borderColor
         });
     }
 

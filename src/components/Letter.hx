@@ -10,7 +10,7 @@ class Letter extends Visual {
     var text :Text;
     public var letter (default, null) :String;
 
-    public function new(_options: { pos :Vector, r :Float, color :Color, letter :String, textColor :Color }) {
+    public function new(_options: { pos :Vector, r :Float, color :Color, letter :String, textColor :Color, borderColor :Vector  }) {
         super({
             name: 'Letter',
             name_unique: true,
@@ -25,7 +25,7 @@ class Letter extends Visual {
         unique_shader.set_float('thickness', 1);
         unique_shader.set_float('smoothness', 0.8);
         unique_shader.set_float('outline', 0.75);
-        unique_shader.set_vector4('outline_color', new Vector(0, 0, 0, 1));
+        unique_shader.set_vector4('outline_color', _options.borderColor);
 
         text = new Text({
             text: _options.letter,
@@ -34,7 +34,7 @@ class Letter extends Visual {
             color: _options.textColor,
             align: center,
             align_vertical: center,
-            point_size: 52,
+            point_size: 46,
             parent: this
         });
 
