@@ -1,2 +1,20 @@
 
-Nothing here yet...
+To-do:
+
+    Cursor:
+    ☐ Make cursor invisible when entering word
+    ☐ Cursor should only be able to move left/right or up/down after entering word
+    ☐ Use left/right to change direction of cursor
+    ☐ Cursor should be moved back when word is aborted
+    
+    Gameplay:
+    ☐ Make "train" approach cursor along the word tracks
+    ☐ Start and goal positions
+    ☐ Via positions
+    ☐ Blocked tiles
+    ☐ Optional via positions that slow the train?
+    ☐ Already used words carried on to next levels?
+    ☐ Crossing over existing letters? Allowed? Bonus?
+
+    Visual:
+    ☐ Settle on a visual style
