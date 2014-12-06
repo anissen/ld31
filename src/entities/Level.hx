@@ -32,9 +32,10 @@ class Level extends Entity {
     var tilesX = 12;
     var tilesY = 7;
     var tileSize = 80;
-    var startingLetterCount = 10;
+    var startingLetterCount = 12;
 
-    var letters :Array<Letter>;
+    var placedLetters :Array<Letter>;
+    var availableLetters :Array<Letter>;
     var cursor :Visual;
     var enteringWord :Bool;
     var direction :Direction;
@@ -53,7 +54,8 @@ class Level extends Entity {
             wordlist.set(word, 0);
         }
 
-        letters = new Array<Letter>();
+        placedLetters = new Array<Letter>();
+        availableLetters = new Array<Letter>();
         enteringWord = false;
         currentWord = "";
         setDirection(Right);
@@ -62,31 +64,18 @@ class Level extends Entity {
 
         for (cell in grid.tiles()) {
             Luxe.draw.box({
-                x: cell.x * tileSize,
-                y: cell.y * tileSize,
+                x: cell.pos.x - tileSize / 2,
+                y: cell.pos.y - tileSize / 2,
                 w: tileSize,
                 h: tileSize,
                 color: new Color(0.2 + 0.05 * Math.random(), 0.2 + 0.05 * Math.random(), 0.2 + 0.05 * Math.random(), 1) // new ColorHSV(255 * Math.random(), 0.5, 0.5)
             });
         }
 
-        var startingLetters = [ for (i in 0 ... startingLetterCount) getRandomLetter() ];
-        startingLetters.sort(function(a :String, b :String) {
-            if (a < b) return -1;
-            if (a > b) return 1;
-            return 0;
-        });
         for (i in 0 ... startingLetterCount) {
-            var letter = startingLetters[i];
-            var charCode = letter.charCodeAt(0) - "A".charCodeAt(0);
-            letters.push(new Letter({
-                pos: new Vector((i + 0.5) * tileSize, (tilesY + 0.5) * tileSize),
-                color: new ColorHSV(charCode * 10, 0.5, 1),
-                r: tileSize / 2,
-                letter: letter,
-                textColor: new ColorHSV(charCode * 10, 0.1, 1)
-            }));
+            availableLetters.push(createNewLetter());
         }
+        repositionLetters();
 
         var startX = 1;
         var startY = 3;
@@ -164,8 +153,8 @@ class Level extends Entity {
     }
 
     function findLetter(letter :String) :Null<Letter> {
-        for (l in letters) {
-            if (l.available && l.letter == letter) return l;
+        for (l in availableLetters) {
+            if (l.letter == letter) return l;
         }
         return null;
     }
@@ -177,6 +166,10 @@ class Level extends Entity {
             return;   
         }
 
+        // this.events.fire('place_letter', letterRep);
+        availableLetters.remove(letterRep);
+        placedLetters.push(letterRep);
+
         startEnteringWord();
         currentWord += letter;
         cursor.pos.add(switch (direction) {
@@ -185,16 +178,16 @@ class Level extends Entity {
             case Left:  new Vector(-tileSize, 0);
             case Right: new Vector(tileSize, 0);
         });
-        letterRep.available = false;
         Actuate
             .tween(letterRep.pos, 0.5, { x: cursor.pos.x, y: cursor.pos.y });
         trace('enterLetter: $currentWord');
     }
 
     function eraseLetter() {
+        // this.events.fire('remove_letter', letter);
         currentWord = currentWord.substr(0, currentWord.length - 1);
         if (currentWord.length == 0) {
-            enteringWord = false;
+            stopEnteringWord();
         }
         trace('eraseLetter: $currentWord');
     }
@@ -221,19 +214,10 @@ class Level extends Entity {
         wordlist.set(word, 1);
         
         trace('$word is a correct word!');
-        
-        var lettersToRemove = [];
-        for (letter in letters) {
-            if (!letter.available) {
-                lettersToRemove.push(letter); // TODO: Is this dangerous?
-            }
-        }
-        for (letter in lettersToRemove) {
-            letters.remove(letter);
-        }
 
-        for (i in letters.length ... startingLetterCount) {
-            letters.push(createNewLetter());
+        placedLetters = [];
+        for (i in availableLetters.length ... startingLetterCount) {
+            availableLetters.push(createNewLetter());
         }
 
         repositionLetters();
@@ -245,12 +229,17 @@ class Level extends Entity {
     function createNewLetter() {
         var letter = getRandomLetter();
         var charCode = letter.charCodeAt(0) - "A".charCodeAt(0);
+        var textColor = new ColorHSV(charCode * 10, 0.1, 1);
+        if (['A', 'E', 'I', 'J', 'O', 'Q', 'U', 'Y'].indexOf(letter) > -1) {
+            textColor.h = 0;
+            textColor.s = 0.5;
+        }
         return new Letter({
-            pos: new Vector(tilesX * Math.random() * tileSize, tilesY * Math.random() * tileSize),
+            pos: grid.getPos(tilesX + 1, tilesY),
             color: new ColorHSV(charCode * 10, 0.5, 1),
             r: tileSize / 2,
             letter: letter,
-            textColor: new ColorHSV(charCode * 10, 0.1, 1)
+            textColor: textColor
         });
     }
 
@@ -259,16 +248,25 @@ class Level extends Entity {
         currentWord = "";
         stopEnteringWord();
 
+        availableLetters = availableLetters.concat(placedLetters);
+        placedLetters = [];
+
         repositionLetters();
     }
 
     function repositionLetters() {
+        availableLetters.sort(function(a :Letter, b :Letter) {
+            if (a.letter < b.letter) return -1;
+            if (a.letter > b.letter) return 1;
+            return 0;
+        });
+
         var count = 0;
-        for (letter in letters) {
+        for (letter in availableLetters) {
+            var pos = grid.getPos(count, tilesY);
             Actuate
-                .tween(letter.pos, 0.5, { x: (count + 0.5) * tileSize, y: (tilesY + 0.5) * tileSize })
-                .delay(0.05 * count)
-                .onComplete(function() { letter.available = true; });
+                .tween(letter.pos, 0.5, { x: pos.x, y: pos.y })
+                .delay(0.03 * count);
             count++;
         }
     }

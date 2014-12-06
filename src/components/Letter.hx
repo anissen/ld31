@@ -8,7 +8,6 @@ import luxe.Vector;
 
 class Letter extends Visual {
     var text :Text;
-    public var available :Bool;
     public var letter (default, null) :String;
 
     public function new(_options: { pos :Vector, r :Float, color :Color, letter :String, textColor :Color }) {
@@ -32,6 +31,5 @@ class Letter extends Visual {
         });
 
         letter = _options.letter;
-        available = true;
     }
 }
