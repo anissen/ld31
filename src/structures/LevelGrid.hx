@@ -1,7 +1,9 @@
 
 package structures;
 
-typedef CellData = { x: Int, y: Int, letter: String, hasBonus: Bool };
+import luxe.Vector;
+
+typedef CellData = { x: Int, y: Int, pos: Vector, letter: String, hasBonus: Bool };
 
 class LevelGrid {
     var tilesX :Int;
@@ -25,7 +27,7 @@ class LevelGrid {
     }
 
     function resetCell(x :Int, y: Int) {
-        grid['$x,$y'] = { x: x, y: y, letter: '', hasBonus: true };
+        grid['$x,$y'] = { x: x, y: y, pos: getPos(x, y), letter: '', hasBonus: true };
     }
 
     public function setLetterOnCell(x :Int, y: Int, letter: String) {
@@ -38,5 +40,9 @@ class LevelGrid {
 
     public function tiles() {
         return grid.iterator();
+    }
+
+    public function getPos(x :Int, y: Int) {
+        return new Vector((x + 0.5) * tileSize, (y + 0.5) * tileSize);
     }
 }
