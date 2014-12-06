@@ -33,6 +33,7 @@ class Level extends Entity {
     var tileSize = 80;
     var startingLetterCount = 10;
 
+    var letters :Array<Letter>;
     var cursor :Visual;
     var direction :Direction;
     var currentWord :String;
@@ -50,6 +51,7 @@ class Level extends Entity {
             wordlist.set(word, 0);
         }
 
+        letters = new Array<Letter>();
         currentWord = "";
         setDirection(Right);
 
@@ -74,21 +76,13 @@ class Level extends Entity {
         for (i in 0 ... startingLetterCount) {
             var letter = startingLetters[i];
             var charCode = letter.charCodeAt(0) - "A".charCodeAt(0);
-            var circle = new Visual({
+            letters.push(new Letter({
                 pos: new Vector((i + 0.5) * tileSize, (tilesY + 0.5) * tileSize),
                 color: new ColorHSV(charCode * 10, 0.5, 1),
-                geometry: Luxe.draw.circle({
-                    r: tileSize / 2
-                })
-            });
-            new Text({
-                text: letter,
-                color: new ColorHSV(charCode * 10, 0.1, 1),
-                align: center, 
-                align_vertical: center,
-                point_size: 36,
-                parent: circle
-            });
+                r: tileSize / 2,
+                letter: letter,
+                textColor: new ColorHSV(charCode * 10, 0.1, 1)
+            }));
         }
 
         var startX = 1;
@@ -103,7 +97,6 @@ class Level extends Entity {
                 solid: true
             })
         });
-        trace(cursor.geometry.vertices);
         cursor.geometry.vertices[2].color = new ColorHSV(60, 0.7, 1, 0.8);
     }
 
@@ -165,7 +158,20 @@ class Level extends Entity {
             .tween(cursor, 0.5, { rotation_z: angle });
     }
 
+    function findLetter(letter :String) :Null<Letter> {
+        for (l in letters) {
+            if (l.letter == letter) return l;
+        }
+        return null;
+    }
+
     function enterLetter(letter :String) {
+        var letterRep = findLetter(letter);
+        if (letterRep == null) {
+            this.events.fire('letter_missing', letter);
+            return;   
+        }
+
         currentWord += letter;
         cursor.pos.add(switch (direction) {
             case Up:    new Vector(0, -tileSize);
@@ -173,6 +179,8 @@ class Level extends Entity {
             case Left:  new Vector(-tileSize, 0);
             case Right: new Vector(tileSize, 0);
         });
+        Actuate
+            .tween(letterRep.pos, 0.5, { x: cursor.pos.x, y: cursor.pos.y });
         trace('enterLetter: $currentWord');
     }
 
