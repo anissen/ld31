@@ -1,11 +1,17 @@
 
 To-do:
 
+    Generel:
+    ☐ Backspace doesn't work
+    ☐ Cannot reset game
+
     Cursor:
     ☐ Make cursor invisible when entering word
     ☐ Cursor should only be able to move left/right or up/down after entering word
     ☐ Use left/right to change direction of cursor
     ☐ Cursor should be moved back when word is aborted
+    ☐ Keep cursor inside grid
+    ☐ [Idea] Replace cursor with directions on the board?
     
     Gameplay:
     ☐ Make "train" approach cursor along the word tracks
