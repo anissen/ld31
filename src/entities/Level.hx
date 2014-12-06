@@ -7,6 +7,7 @@ import luxe.Entity;
 import luxe.Input;
 import luxe.Text;
 import luxe.tween.Actuate;
+import luxe.tween.easing.Quad;
 import luxe.Visual;
 import phoenix.geometry.LineGeometry;
 import luxe.options.GeometryOptions.LineGeometryOptions;
@@ -35,6 +36,7 @@ class Level extends Entity {
 
     var letters :Array<Letter>;
     var cursor :Visual;
+    var enteringWord :Bool;
     var direction :Direction;
     var currentWord :String;
 
@@ -52,6 +54,7 @@ class Level extends Entity {
         }
 
         letters = new Array<Letter>();
+        enteringWord = false;
         currentWord = "";
         setDirection(Right);
 
@@ -63,7 +66,7 @@ class Level extends Entity {
                 y: cell.y * tileSize,
                 w: tileSize,
                 h: tileSize,
-                color: new Color(0.2 + 0.1 * Math.random(), 0.2 + 0.1 * Math.random(), 0.2 + 0.1 * Math.random(), 1) // new ColorHSV(255 * Math.random(), 0.5, 0.5)
+                color: new Color(0.2 + 0.05 * Math.random(), 0.2 + 0.05 * Math.random(), 0.2 + 0.05 * Math.random(), 1) // new ColorHSV(255 * Math.random(), 0.5, 0.5)
             });
         }
 
@@ -147,6 +150,8 @@ class Level extends Entity {
     }
 
     function setDirection(_direction :Direction) {
+        if (enteringWord) return;
+
         direction = _direction;
         var angle = switch (direction) {
             case Up:    -90;
@@ -160,7 +165,7 @@ class Level extends Entity {
 
     function findLetter(letter :String) :Null<Letter> {
         for (l in letters) {
-            if (l.letter == letter) return l;
+            if (l.available && l.letter == letter) return l;
         }
         return null;
     }
@@ -172,6 +177,7 @@ class Level extends Entity {
             return;   
         }
 
+        startEnteringWord();
         currentWord += letter;
         cursor.pos.add(switch (direction) {
             case Up:    new Vector(0, -tileSize);
@@ -179,6 +185,7 @@ class Level extends Entity {
             case Left:  new Vector(-tileSize, 0);
             case Right: new Vector(tileSize, 0);
         });
+        letterRep.available = false;
         Actuate
             .tween(letterRep.pos, 0.5, { x: cursor.pos.x, y: cursor.pos.y });
         trace('enterLetter: $currentWord');
@@ -186,16 +193,100 @@ class Level extends Entity {
 
     function eraseLetter() {
         currentWord = currentWord.substr(0, currentWord.length - 1);
+        if (currentWord.length == 0) {
+            enteringWord = false;
+        }
         trace('eraseLetter: $currentWord');
     }
 
     function tryWord() {
         trace('tryWord: $currentWord');
+        var word = currentWord.toLowerCase();
+
+        if (!wordlist.exists(word)) {
+            trace('$word is an invalid word!');
+            this.events.fire('wrong_word', word);
+            abortWord();
+            return;
+        }
+
+        var timesUsed = wordlist.get(word);
+        if (timesUsed > 0) {
+            trace('$word has already been used!');
+            this.events.fire('word_already_used', word);
+            abortWord();
+            return;   
+        }
+
+        wordlist.set(word, 1);
+        
+        trace('$word is a correct word!');
+        
+        var lettersToRemove = [];
+        for (letter in letters) {
+            if (!letter.available) {
+                lettersToRemove.push(letter); // TODO: Is this dangerous?
+            }
+        }
+        for (letter in lettersToRemove) {
+            letters.remove(letter);
+        }
+
+        for (i in letters.length ... startingLetterCount) {
+            letters.push(createNewLetter());
+        }
+
+        repositionLetters();
+
+        currentWord = currentWord.substr(currentWord.length - 1); // start with the last letter of last word
+        stopEnteringWord();
+    }
+
+    function createNewLetter() {
+        var letter = getRandomLetter();
+        var charCode = letter.charCodeAt(0) - "A".charCodeAt(0);
+        return new Letter({
+            pos: new Vector(tilesX * Math.random() * tileSize, tilesY * Math.random() * tileSize),
+            color: new ColorHSV(charCode * 10, 0.5, 1),
+            r: tileSize / 2,
+            letter: letter,
+            textColor: new ColorHSV(charCode * 10, 0.1, 1)
+        });
     }
 
     function abortWord() {
         trace('abortWord: $currentWord');
         currentWord = "";
+        stopEnteringWord();
+
+        repositionLetters();
+    }
+
+    function repositionLetters() {
+        var count = 0;
+        for (letter in letters) {
+            Actuate
+                .tween(letter.pos, 0.5, { x: (count + 0.5) * tileSize, y: (tilesY + 0.5) * tileSize })
+                .delay(0.05 * count)
+                .onComplete(function() { letter.available = true; });
+            count++;
+        }
+    }
+
+    function startEnteringWord() {
+        if (enteringWord) return;
+        enteringWord = true;
+        Actuate
+            .tween(cursor.color, 0.3, { a: 0 })
+            .ease(Quad.easeInOut);
+    }
+
+    function stopEnteringWord() {
+        if (!enteringWord) return;
+        enteringWord = false;
+        Actuate
+            .tween(cursor.color, 0.3, { a: 1 })
+            .ease(Quad.easeInOut);
     }
 
 } //Level
