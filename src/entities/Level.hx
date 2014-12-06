@@ -37,6 +37,7 @@ class Level extends Entity {
     var placedLetters :Array<Letter>;
     var availableLetters :Array<Letter>;
     var cursor :Visual;
+    var wordStartedAt :Vector; //{ x: Int, y: Int };
     var enteringWord :Bool;
     var direction :Direction;
     var currentWord :String;
@@ -57,6 +58,7 @@ class Level extends Entity {
         placedLetters = new Array<Letter>();
         availableLetters = new Array<Letter>();
         enteringWord = false;
+        wordStartedAt = new Vector();
         currentWord = "";
         setDirection(Right);
 
@@ -170,25 +172,51 @@ class Level extends Entity {
         availableLetters.remove(letterRep);
         placedLetters.push(letterRep);
 
+        repositionLetters();
+
         startEnteringWord();
-        currentWord += letter;
+
         cursor.pos.add(switch (direction) {
             case Up:    new Vector(0, -tileSize);
             case Down:  new Vector(0, tileSize);
             case Left:  new Vector(-tileSize, 0);
             case Right: new Vector(tileSize, 0);
         });
-        Actuate
-            .tween(letterRep.pos, 0.5, { x: cursor.pos.x, y: cursor.pos.y });
+
+        // if direction is UP or LEFT, prepend letters instead (to get correct reading direction)
+        if (direction == Up || direction == Left) {
+            currentWord = currentWord.substr(0, currentWord.length - 1) + letter + currentWord.substr(currentWord.length - 1);
+
+            Actuate
+                .tween(placedLetters[0].pos, 0.5, { x: cursor.pos.x, y: cursor.pos.y });
+            for (i in 1 ... placedLetters.length) {
+                var lastPlacedLetter = placedLetters[i - 1];
+                var placedLetter = placedLetters[i];
+                Actuate
+                    .tween(placedLetter.pos, 0.5, { x: lastPlacedLetter.pos.x, y: lastPlacedLetter.pos.y });
+            }
+
+        } else {
+            currentWord += letter;
+            Actuate
+                .tween(letterRep.pos, 0.5, { x: cursor.pos.x, y: cursor.pos.y });
+        }
         trace('enterLetter: $currentWord');
     }
 
     function eraseLetter() {
+        if (currentWord.length == 0) return;
+
         // this.events.fire('remove_letter', letter);
         currentWord = currentWord.substr(0, currentWord.length - 1);
         if (currentWord.length == 0) {
             stopEnteringWord();
         }
+
+        availableLetters.push(placedLetters.pop());
+
+        repositionLetters();
+
         trace('eraseLetter: $currentWord');
     }
 
@@ -250,6 +278,8 @@ class Level extends Entity {
         currentWord = "";
         stopEnteringWord();
 
+        cursor.pos = wordStartedAt.clone();
+
         availableLetters = availableLetters.concat(placedLetters);
         placedLetters = [];
 
@@ -275,6 +305,7 @@ class Level extends Entity {
 
     function startEnteringWord() {
         if (enteringWord) return;
+        wordStartedAt = cursor.pos.clone();
         enteringWord = true;
         Actuate
             .tween(cursor.color, 0.3, { a: 0 })

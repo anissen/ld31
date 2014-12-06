@@ -2,7 +2,6 @@
 To-do:
 
     Generel:
-    ☐ Backspace doesn't work
     ☐ Cannot reset game
 
     Cursor:
@@ -24,3 +23,8 @@ To-do:
 
     Visual:
     ☐ Settle on a visual style
+
+
+＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
+Archive:
+  ✔ Backspace doesn't work @done (07-12-14 00:45) @project(To-do)
