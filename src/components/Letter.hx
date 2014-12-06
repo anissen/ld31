@@ -20,13 +20,21 @@ class Letter extends Visual {
                 r: _options.r
             })
         });
-        
+
+        var unique_shader = Luxe.renderer.shaders.bitmapfont.shader.clone(); // .font.shader.clone();
+        unique_shader.set_float('thickness', 1);
+        unique_shader.set_float('smoothness', 0.8);
+        unique_shader.set_float('outline', 0.75);
+        unique_shader.set_vector4('outline_color', new Vector(0, 0, 0, 1));
+
         text = new Text({
             text: _options.letter,
+            font: Luxe.resources.find_font("rail"),
+            shader: unique_shader,
             color: _options.textColor,
-            align: center, 
+            align: center,
             align_vertical: center,
-            point_size: 36,
+            point_size: 52,
             parent: this
         });
 
