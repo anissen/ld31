@@ -41,7 +41,7 @@ class Level extends Entity {
     var train :Visual;
     var trainTrackIndex :Int;
     var trainFirstMoveInterval = 30;
-    var trainInitialMoveInterval = 10;
+    var trainInitialMoveInterval = 6;
     var trainMoveInterval :Int;
 
     public function new() {
@@ -219,7 +219,7 @@ class Level extends Entity {
             trace('You lose!');
             return;
         }
-        if (trainMoveInterval > 3) {
+        if (trainMoveInterval > 2) {
             trainMoveInterval -= 1;
         }
 
@@ -235,7 +235,8 @@ class Level extends Entity {
             .ease(Linear.easeNone);
 
         Actuate
-            .tween(train.pos, trainMoveInterval / 10, { x: trainTrackLetter.pos.x, y: trainTrackLetter.pos.y });
+            .tween(train.pos, trainMoveInterval / 10, { x: trainTrackLetter.pos.x, y: trainTrackLetter.pos.y })
+            .ease(Quad.easeInOut);
         trainTrackIndex++;
         Luxe.timer.schedule(trainMoveInterval, moveTrain);
     }
@@ -248,7 +249,25 @@ class Level extends Entity {
     }
 
     function getRandomLetter() :String {
+        if (vowelCount() < 3) {
+            return letterFrequencies.randomVowel();
+        } else if (consonantCount() < 5) {
+            return letterFrequencies.randomConsonant();
+        }
         return letterFrequencies.randomLetter();
+    }
+
+    function vowelCount() {
+        var count = 0;
+        for (l in availableLetters) {
+            var isVowel = (['A', 'E', 'I', 'J', 'O', 'Q', 'U', 'Y'].indexOf(l.letter) > -1);
+            if (isVowel) count++;
+        }
+        return count;
+    }
+
+    function consonantCount() {
+        return availableLetters.length - vowelCount();
     }
 
     public function reset() {
@@ -289,10 +308,6 @@ class Level extends Entity {
         setCursor(cursorPos, true);
         
         repositionLetters();
-    }
-
-    function addLetter() {
-
     }
 
     function createNewLetter() {
