@@ -41,7 +41,7 @@ class Level extends Entity {
     var train :Visual;
     var trainTrackIndex :Int;
     var trainFirstMoveInterval = 30;
-    var trainInitialMoveInterval = 15;
+    var trainInitialMoveInterval = 10;
     var trainMoveInterval :Int;
 
     public function new() {
@@ -201,7 +201,7 @@ class Level extends Entity {
         trainMoveInterval = trainInitialMoveInterval;
 
         train = new Visual({
-            origin: new Vector(tileSize / 2, tileSize / 2 - 40),
+            origin: new Vector(tileSize / 2, tileSize / 2 + 20),
             size: new Vector(130, 130),
             texture: Luxe.resources.find_texture("assets/images/train.png"),
             pos: grid.getPos(start.x, start.y),
