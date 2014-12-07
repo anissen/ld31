@@ -1,0 +1,14 @@
+{
+    "text": [
+        { "id": "assets/wordlists/en.txt", "async": true }
+    ],
+    "textures": [
+        { "id": "assets/images/train.png" },
+        { "id": "assets/images/track_straight.png" },
+        { "id": "assets/images/track_bend.png" },
+        { "id": "assets/particles/smoke.png" }
+    ],
+    "fonts": [
+        { "id" : "rail.fnt", "path" : "assets/fonts/rail/" }
+    ]
+}
