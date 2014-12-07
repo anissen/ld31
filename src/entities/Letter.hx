@@ -1,5 +1,5 @@
 
-package components;
+package entities;
 
 import luxe.Visual;
 import luxe.Text;
