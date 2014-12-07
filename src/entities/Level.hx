@@ -36,8 +36,9 @@ class Level extends Entity {
 
     var placedLetters :Array<Letter>;
     var availableLetters :Array<Letter>;
-    var cursor :Visual;
-    var wordStartedAt :Vector; //{ x: Int, y: Int };
+    // var cursor :Visual;
+    var cursorPos :{ x: Int, y :Int };
+    var wordStartedAt :{ x: Int, y: Int };
     var enteringWord :Bool;
     var direction :Direction;
     var currentWord :String;
@@ -58,14 +59,15 @@ class Level extends Entity {
         placedLetters = new Array<Letter>();
         availableLetters = new Array<Letter>();
         enteringWord = false;
-        wordStartedAt = new Vector();
         currentWord = "";
+        cursorPos = { x: 0, y: 0 };
+        wordStartedAt = { x: 0, y: 0 };
         setDirection(Right);
 
         grid.reset();
 
         for (cell in grid.tiles()) {
-            Luxe.draw.box({
+            var box = Luxe.draw.box({
                 x: cell.pos.x - tileSize / 2,
                 y: cell.pos.y - tileSize / 2,
                 w: tileSize,
@@ -81,17 +83,19 @@ class Level extends Entity {
 
         var startX = 1;
         var startY = 3;
-        cursor = new Visual({
-            pos: new Vector((startX + 0.5) * tileSize, (startY + 0.5) * tileSize),
-            color: new ColorHSV(30, 0.7, 1, 0.5), 
-            geometry: Luxe.draw.ngon({
-                sides: 3,
-                r: tileSize / 2,
-                angle: 270,
-                solid: true
-            })
-        });
-        cursor.geometry.vertices[2].color = new ColorHSV(60, 0.7, 1, 0.8);
+        cursorPos.x = startX;
+        cursorPos.y = startY;
+        // cursor = new Visual({
+        //     pos: grid.getPos(startX, startY),
+        //     color: new ColorHSV(30, 0.7, 1, 0.5), 
+        //     geometry: Luxe.draw.ngon({
+        //         sides: 3,
+        //         r: tileSize / 2,
+        //         angle: 270,
+        //         solid: true
+        //     })
+        // });
+        // cursor.geometry.vertices[2].color = new ColorHSV(60, 0.7, 1, 0.8);
     }
 
     function getRandomLetter() :String {
@@ -150,8 +154,8 @@ class Level extends Entity {
             case Left:  180;
             case Right: 0;
         };
-        Actuate
-            .tween(cursor, 0.5, { rotation_z: angle });
+        // Actuate
+        //     .tween(cursor, 0.5, { rotation_z: angle });
     }
 
     function findLetter(letter :String) :Null<Letter> {
@@ -176,31 +180,38 @@ class Level extends Entity {
 
         startEnteringWord();
 
-        cursor.pos.add(switch (direction) {
-            case Up:    new Vector(0, -tileSize);
-            case Down:  new Vector(0, tileSize);
-            case Left:  new Vector(-tileSize, 0);
-            case Right: new Vector(tileSize, 0);
-        });
+        switch (direction) {
+            case Up:    cursorPos.y -= 1;
+            case Down:  cursorPos.y += 1;
+            case Left:  cursorPos.x -= 1;
+            case Right: cursorPos.x += 1;
+        };
 
         // if direction is UP or LEFT, prepend letters instead (to get correct reading direction)
         if (direction == Up || direction == Left) {
             currentWord = currentWord.substr(0, currentWord.length - 1) + letter + currentWord.substr(currentWord.length - 1);
 
+            var pos = grid.getPos(cursorPos.x, cursorPos.y);
+            placedLetters[0].gridPos = { x: cursorPos.x, y: cursorPos.y };
             Actuate
-                .tween(placedLetters[0].pos, 0.5, { x: cursor.pos.x, y: cursor.pos.y });
+                .tween(placedLetters[0].pos, 0.5, { x: pos.x, y: pos.y });
             for (i in 1 ... placedLetters.length) {
                 var lastPlacedLetter = placedLetters[i - 1];
                 var placedLetter = placedLetters[i];
+                var pos = grid.getPos(lastPlacedLetter.gridPos.x, lastPlacedLetter.gridPos.y);
+                placedLetter.gridPos = { x: lastPlacedLetter.gridPos.x, y: lastPlacedLetter.gridPos.y };
                 Actuate
-                    .tween(placedLetter.pos, 0.5, { x: lastPlacedLetter.pos.x, y: lastPlacedLetter.pos.y });
+                    .tween(placedLetter.pos, 0.5, { x: pos.x, y: pos.y });
             }
 
         } else {
             currentWord += letter;
+            var pos = grid.getPos(cursorPos.x, cursorPos.y);
+            letterRep.gridPos = { x: cursorPos.x, y: cursorPos.y };
             Actuate
-                .tween(letterRep.pos, 0.5, { x: cursor.pos.x, y: cursor.pos.y });
+                .tween(letterRep.pos, 0.5, { x: pos.x, y: pos.y });
         }
+
         trace('enterLetter: $currentWord');
     }
 
@@ -275,10 +286,21 @@ class Level extends Entity {
 
     function abortWord() {
         trace('abortWord: $currentWord');
-        currentWord = "";
+        
+        currentWord = ""; // TODO: Don't clear entire word unless it's the first word
+        
+        /*
+        switch (direction) {
+            case Up:    currentWord.substr(currentWord.length - 1);
+            case Down:  currentWord.charAt(0);
+            case Left:  cursorPos.x -= 1;
+            case Right: cursorPos.x += 1;
+        };
+        */
         stopEnteringWord();
 
-        cursor.pos = wordStartedAt.clone();
+        // cursor.pos = wordStartedAt.clone();
+        cursorPos = { x: wordStartedAt.x, y: wordStartedAt.y };
 
         availableLetters = availableLetters.concat(placedLetters);
         placedLetters = [];
@@ -305,19 +327,20 @@ class Level extends Entity {
 
     function startEnteringWord() {
         if (enteringWord) return;
-        wordStartedAt = cursor.pos.clone();
+        // wordStartedAt = cursor.pos.clone();
+        wordStartedAt = { x: cursorPos.x, y: cursorPos.y };
         enteringWord = true;
-        Actuate
-            .tween(cursor.color, 0.3, { a: 0 })
-            .ease(Quad.easeInOut);
+        // Actuate
+        //     .tween(cursor.color, 0.3, { a: 0 })
+        //     .ease(Quad.easeInOut);
     }
 
     function stopEnteringWord() {
         if (!enteringWord) return;
         enteringWord = false;
-        Actuate
-            .tween(cursor.color, 0.3, { a: 1 })
-            .ease(Quad.easeInOut);
+        // Actuate
+        //     .tween(cursor.color, 0.3, { a: 1 })
+        //     .ease(Quad.easeInOut);
     }
 
 } //Level
