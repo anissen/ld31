@@ -24,46 +24,220 @@ enum Direction {
     Right;
 }
 
+class Cursor {
+    
+}
+
+class WordList {
+    var wordlist :Map<String, Int>;
+    
+    public function new() {
+        wordlist = new Map<String, Int>();
+    }
+
+    public function reset() {
+        for (word in Main.words) {
+            wordlist.set(word, 0);
+        }
+    }
+
+    inline function fix(word :String) {
+        return word.toLowerCase();
+    }
+
+    public function isValid(word :String) {
+        return wordlist.exists(fix(word));
+    }
+
+    public function usageCount(word :String) {
+        return wordlist.get(fix(word));
+    }
+
+    public function use(word :String) {
+        return wordlist.set(fix(word), usageCount(fix(word)) + 1);
+    }
+}
+
+typedef StartWordEvent = { 
+    word: String,
+    start: { x: Int, y: Int },
+    letters: Array<Letter> 
+};
+typedef AbortWordEvent = { 
+    word: String,
+    start: { x: Int, y: Int },
+    letters: Array<Letter> 
+};
+typedef CorrectWordEvent = { 
+    word: String, 
+    letters: Array<Letter> 
+};
+typedef EraseWordEvent = { 
+    word: String,
+    erasedLetter: Letter
+};
+typedef WrongWordEvent = { 
+    word: String, 
+    letters: Array<Letter>
+};
+typedef AlreadyUsedWordEvent = { 
+    word: String, 
+    letters: Array<Letter>
+};
+
+class Word extends Entity {
+    var word :String;
+    var start :{ x: Int, y: Int };
+    var end :{ x: Int, y: Int };
+    var direction :Direction;
+    var wordlist :WordList;
+    var letters :Array<Letter>;
+    var firstWord :Bool;
+    var enteringWord :Bool;
+
+    public function new() {
+        super({ name: 'Word' });
+
+        wordlist = new WordList();
+        letters = new Array<Letter>();
+    }
+
+    public function reset() {
+        word = "";
+        start = null;
+        end = null;
+        firstWord = true;
+        enteringWord = false;
+        wordlist.reset();
+    }
+
+    function startWord(_x :Int, _y: Int, _direction :Direction) {
+        enteringWord = true;
+        start = { x: _x, y: _y };
+        direction = _direction;
+
+        this.events.fire('word.start_word', { word: word, letters: letters, start: start });
+    }
+
+    public function addLetter(_letter :String, _letterRep :Letter, _x :Int, _y :Int, _direction :Direction) {
+        word += _letter;
+        letters.push(_letterRep);
+
+        if (!enteringWord) {
+            startWord(_x, _y, _direction);
+        }
+
+        trace('enterLetter: $word');
+    }
+
+    public function abort() {
+        trace('abortWord: $word');
+
+        this.events.fire('word.abort', { word: word, letters: letters, start: start });
+
+        // Start from first letter unless it's the first word
+        word = (firstWord ? "" : word.substr(0, 1));
+        letters = [];
+    }
+
+    public function submit() {
+        trace('tryWord: $word');
+
+        enteringWord = false;
+
+        if (!wordlist.isValid(word)) {
+            trace('$word is an invalid word!');
+            this.events.fire('word.wrong', { word: word, letters: letters });
+            return;
+        }
+
+        if (wordlist.usageCount(word) > 0) {
+            trace('$word has already been used!');
+            this.events.fire('word.already_used', { word: word, letters: letters });
+            return;   
+        }
+
+        wordlist.use(word);
+        firstWord = false;
+
+        this.events.fire('word.correct', { word: word, letters: (letters :Array<Letter>) });
+
+        // start with the last letter of last word
+        word = word.substr(word.length - 1);
+        letters = [];
+    }
+
+    public function erase() {
+        if (word.length == 0) {
+            enteringWord = false;
+            return;
+        }
+        
+        trace('erase: $word');
+        word = word.substr(0, word.length - 1);
+        this.events.fire('word.erase', { erasedLetter: letters.pop() });
+    }
+
+    public function is_entering_word() {
+        return enteringWord;
+    }
+}
+
 class Level extends Entity {
     var letterFrequencies :LetterFrequencies;
-    var wordlist :Map<String, Int>;
-    var word :String = "";
-    var grid :LevelGrid; // TODO: Move this to a its own class
+    var grid :LevelGrid;
     var tilesX = 12;
     var tilesY = 7;
     var tileSize = 80;
     var startingLetterCount = 12;
 
-    var placedLetters :Array<Letter>;
     var availableLetters :Array<Letter>;
     var cursor :Visual;
     var cursorPos :{ x: Int, y :Int };
-    var wordStartedAt :{ x: Int, y: Int };
-    var enteringWord :Bool;
     var direction :Direction;
-    var currentWord :String;
-    var firstWord :Bool;
+    var word :Word;
 
     public function new() {
         super({ name: 'Level' });
 
         letterFrequencies = new LetterFrequencies();
         grid = new LevelGrid(tilesX, tilesY, tileSize);
+        word = new Word();
+        setupWordEvents();
+    }
+
+    function setupWordEvents() {
+        word.events.listen('word.start_word', function(data :StartWordEvent) {
+            showCursor(false);
+        });
+        word.events.listen('word.wrong', function(data :WrongWordEvent) {
+            word.abort();
+        });
+        word.events.listen('word.already_used', function(data :AlreadyUsedWordEvent) {
+            word.abort();
+        });
+        word.events.listen('word.abort', word_aborted);
+        word.events.listen('word.erase', function(data :EraseWordEvent) {
+            availableLetters.push(data.erasedLetter);
+            repositionLetters();
+        });
+        word.events.listen('word.correct', function(data :CorrectWordEvent) {
+            for (letter in data.letters) {
+                letter.color.tween(0.5, { v: 0.3 });
+            }
+
+            for (i in availableLetters.length ... startingLetterCount) {
+                availableLetters.push(createNewLetter());
+            }
+            repositionLetters();
+            showCursor(true);
+        });
     }
 
     override function init() {
-        wordlist = new Map<String, Int>();
-        for (word in Main.words) {
-            wordlist.set(word, 0);
-        }
-
-        placedLetters = new Array<Letter>();
         availableLetters = new Array<Letter>();
-        enteringWord = false;
-        currentWord = "";
+        word.reset();
         cursorPos = { x: 0, y: 0 };
-        wordStartedAt = { x: 0, y: 0 };
-        firstWord = true;
 
         grid.reset();
 
@@ -110,21 +284,120 @@ class Level extends Entity {
         init();
     }
 
+    function setDirection(_direction :Direction) {
+        if (word.is_entering_word()) return;
+
+        direction = _direction;
+        var angle = switch (direction) {
+            case Right: 0;
+            case Down:  90;
+            case Left:  180;
+            case Up:    270;
+        }; 
+        Actuate
+            .tween(cursor, 0.5, { rotation_z: angle });
+    }
+
+    function findLetter(letter :String) :Null<Letter> {
+        for (l in availableLetters) {
+            if (l.letter == letter) return l;
+        }
+        return null;
+    }
+
+    function enterLetter(letter :String) {
+        var letterRep = findLetter(letter);
+        if (letterRep == null) {
+            this.events.fire('letter_missing', letter);
+            return;   
+        }
+
+        availableLetters.remove(letterRep);
+
+        switch (direction) {
+            case Up:    cursorPos.y -= 1;
+            case Down:  cursorPos.y += 1;
+            case Left:  cursorPos.x -= 1;
+            case Right: cursorPos.x += 1;
+        };
+
+        word.addLetter(letter, letterRep, cursorPos.x, cursorPos.y, direction);
+        var pos = grid.getPos(cursorPos.x, cursorPos.y);
+        letterRep.gridPos = { x: cursorPos.x, y: cursorPos.y };
+        Actuate
+            .tween(letterRep.pos, 0.5, { x: pos.x, y: pos.y });
+        Actuate
+            .tween(cursor.pos, 0.5, { x: pos.x, y: pos.y });
+
+        repositionLetters();
+    }
+
+    function createNewLetter() {
+        var letter = getRandomLetter();
+        var charCode = letter.charCodeAt(0) - "A".charCodeAt(0);
+        var textColor = new ColorHSV(charCode * 10, 0.1, 1);
+        var borderColor = new Vector(0, 0, 0, 1);
+        var isVowel = (['A', 'E', 'I', 'J', 'O', 'Q', 'U', 'Y'].indexOf(letter) > -1);
+        if (isVowel) {
+            borderColor = new Vector(0.6, 0, 0, 1);
+        }
+        return new Letter({
+            pos: grid.getPos(tilesX + 1, tilesY),
+            color: new ColorHSV(charCode * 10, 0.6, 1),
+            r: tileSize / 2,
+            letter: letter,
+            textColor: textColor,
+            borderColor: borderColor
+        });
+    }
+
+    function word_aborted(data :AbortWordEvent) {
+        cursorPos = { x: data.start.x, y: data.start.y };
+        cursor.pos = grid.getPos(data.start.x, data.start.y);
+        showCursor(true);
+
+        availableLetters = availableLetters.concat(data.letters);
+        repositionLetters();
+    }
+
+    function showCursor(visible :Bool) {
+        Actuate
+            .tween(cursor.color, 0.3, { a: (visible ? 1 : 0) })
+            .ease(Quad.easeInOut);
+    }
+
+    function repositionLetters() {
+        availableLetters.sort(function(a :Letter, b :Letter) {
+            if (a.letter < b.letter) return -1;
+            if (a.letter > b.letter) return 1;
+            return 0;
+        });
+
+        var count = 0;
+        for (letter in availableLetters) {
+            var pos = grid.getPos(count, tilesY);
+            Actuate
+                .tween(letter.pos, 0.5, { x: pos.x, y: pos.y })
+                .delay(0.03 * count);
+            count++;
+        }
+    }
+
     override function onkeyup(e :KeyEvent) {
         switch (e.keycode) {
-            // case Key.up:    setDirection(Up);
-            // case Key.down:  setDirection(Down);
-            // case Key.left:  setDirection(Left);
-            // case Key.right: setDirection(Right);
+            case Key.up:    setDirection(Up);
+            case Key.down:  setDirection(Down);
+            case Key.left:  setDirection(Left);
+            case Key.right: setDirection(Right);
             case Key.space: setDirection(switch (direction) {
                 case Up: Right;
                 case Right: Down;
                 case Down: Left;
                 case Left: Up;
             });
-            case Key.backspace: eraseLetter();
-            case Key.enter: tryWord();
-            case Key.escape: abortWord();
+            case Key.backspace: word.erase();
+            case Key.enter: word.submit();
+            case Key.escape: word.abort();
             case Key.key_a: enterLetter("A");
             case Key.key_b: enterLetter("B");
             case Key.key_c: enterLetter("C");
@@ -152,187 +425,6 @@ class Level extends Entity {
             case Key.key_y: enterLetter("Y");
             case Key.key_z: enterLetter("Z");
         }
-    }
-
-    function setDirection(_direction :Direction) {
-        if (enteringWord) return;
-
-        direction = _direction;
-        var angle = switch (direction) {
-            case Right: 0;
-            case Down:  90;
-            case Left:  180;
-            case Up:    270;
-        }; 
-        Actuate
-            .tween(cursor, 0.5, { rotation_z: angle });
-    }
-
-    function findLetter(letter :String) :Null<Letter> {
-        for (l in availableLetters) {
-            if (l.letter == letter) return l;
-        }
-        return null;
-    }
-
-    function enterLetter(letter :String) {
-        var letterRep = findLetter(letter);
-        if (letterRep == null) {
-            this.events.fire('letter_missing', letter);
-            return;   
-        }
-
-        // this.events.fire('place_letter', letterRep);
-        availableLetters.remove(letterRep);
-        placedLetters.push(letterRep);
-
-        repositionLetters();
-
-        startEnteringWord();
-
-        switch (direction) {
-            case Up:    cursorPos.y -= 1;
-            case Down:  cursorPos.y += 1;
-            case Left:  cursorPos.x -= 1;
-            case Right: cursorPos.x += 1;
-        };
-
-        currentWord += letter;
-        var pos = grid.getPos(cursorPos.x, cursorPos.y);
-        letterRep.gridPos = { x: cursorPos.x, y: cursorPos.y };
-        Actuate
-            .tween(letterRep.pos, 0.5, { x: pos.x, y: pos.y });
-        Actuate
-            .tween(cursor.pos, 0.5, { x: pos.x, y: pos.y });
-
-        trace('enterLetter: $currentWord');
-    }
-
-    function eraseLetter() {
-        if (currentWord.length == 0) return;
-
-        // this.events.fire('remove_letter', letter);
-        currentWord = currentWord.substr(0, currentWord.length - 1);
-        if (currentWord.length == 0) {
-            stopEnteringWord();
-        }
-
-        availableLetters.push(placedLetters.pop());
-
-        repositionLetters();
-
-        trace('eraseLetter: $currentWord');
-    }
-
-    function tryWord() {
-        trace('tryWord: $currentWord');
-        var word = currentWord.toLowerCase();
-
-        if (!wordlist.exists(word)) {
-            trace('$word is an invalid word!');
-            this.events.fire('wrong_word', word);
-            abortWord();
-            return;
-        }
-
-        var timesUsed = wordlist.get(word);
-        if (timesUsed > 0) {
-            trace('$word has already been used!');
-            this.events.fire('word_already_used', word);
-            abortWord();
-            return;   
-        }
-
-        wordlist.set(word, 1);
-        
-        trace('$word is a correct word!');
-
-        firstWord = false;
-
-        for (letter in placedLetters) {
-            letter.color.tween(0.5, { v: 0.3 });
-        }
-
-        placedLetters = [];
-        for (i in availableLetters.length ... startingLetterCount) {
-            availableLetters.push(createNewLetter());
-        }
-
-        repositionLetters();
-
-        // start with the last letter of last word
-        currentWord = currentWord.substr(currentWord.length - 1);
-        stopEnteringWord();
-    }
-
-    function createNewLetter() {
-        var letter = getRandomLetter();
-        var charCode = letter.charCodeAt(0) - "A".charCodeAt(0);
-        var textColor = new ColorHSV(charCode * 10, 0.1, 1);
-        var borderColor = new Vector(0, 0, 0, 1);
-        var isVowel = (['A', 'E', 'I', 'J', 'O', 'Q', 'U', 'Y'].indexOf(letter) > -1);
-        if (isVowel) {
-            borderColor = new Vector(0.6, 0, 0, 1);
-        }
-        return new Letter({
-            pos: grid.getPos(tilesX + 1, tilesY),
-            color: new ColorHSV(charCode * 10, 0.6, 1),
-            r: tileSize / 2,
-            letter: letter,
-            textColor: textColor,
-            borderColor: borderColor
-        });
-    }
-
-    function abortWord() {
-        trace('abortWord: $currentWord');
-        
-        // Start from first letter unless it's the first word
-        currentWord = (firstWord ? "" : currentWord.substr(0, 1));
-
-        stopEnteringWord();
-
-        cursorPos = { x: wordStartedAt.x, y: wordStartedAt.y };
-        cursor.pos = grid.getPos(wordStartedAt.x, wordStartedAt.y);
-
-        availableLetters = availableLetters.concat(placedLetters);
-        placedLetters = [];
-
-        repositionLetters();
-    }
-
-    function repositionLetters() {
-        availableLetters.sort(function(a :Letter, b :Letter) {
-            if (a.letter < b.letter) return -1;
-            if (a.letter > b.letter) return 1;
-            return 0;
-        });
-
-        var count = 0;
-        for (letter in availableLetters) {
-            var pos = grid.getPos(count, tilesY);
-            Actuate
-                .tween(letter.pos, 0.5, { x: pos.x, y: pos.y })
-                .delay(0.03 * count);
-            count++;
-        }
-    }
-
-    function startEnteringWord() {
-        if (enteringWord) return;
-        wordStartedAt = { x: cursorPos.x, y: cursorPos.y };
-        enteringWord = true;
-        Actuate
-            .tween(cursor.color, 0.3, { a: 0 })
-            .ease(Quad.easeInOut);
-    }
-
-    function stopEnteringWord() {
-        if (!enteringWord) return;
-        enteringWord = false;
-        Actuate
-            .tween(cursor.color, 0.3, { a: 1 })
-            .ease(Quad.easeInOut);
     }
 
 } //Level
