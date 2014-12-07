@@ -11,7 +11,7 @@ To-do:
 
     Generel:
     ☐ X, J, Q should slow down
-    ☐ Cannot reset game
+    ✔ Cannot reset game @done (07-12-14 22:45)
     ☐ Game screens
         ☐ Title screen
         ☐ Menu screen
@@ -29,9 +29,9 @@ To-do:
     ☐ [Idea] Replace cursor with directions on the board?
     
     Gameplay:
-    ☐ Make "train" approach cursor along the word tracks
-    ☐ Start and goal positions
-    ☐ Via positions
+    ✔ Make "train" approach cursor along the word tracks @done (07-12-14 22:46)
+    ✔ Start and goal positions @done (07-12-14 22:46)
+    ✔ Via positions @done (07-12-14 22:46)
     ☐ Blocked tiles
     ☐ Optional via positions that slow the train?
     ☐ Already used words carried on to next levels?
@@ -43,4 +43,11 @@ To-do:
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
+  ✔ Input words @done (07-12-14 19:34) @project(To-do)
+  ✔ Start, goal @done (07-12-14 19:34) @project(To-do)
+  ✔ Ensure vowels, consonants @done (07-12-14 19:45) @project(To-do)
+  ✔ Stay inside map @done (07-12-14 21:10) @project(To-do)
+  ✘ Words in wrong direction?? @cancelled (07-12-14 20:32) @project(To-do)
+  ✔ Ensure cursor position is valid @done (07-12-14 21:35) @project(To-do)
+  ✔ Cannot reset game @done (07-12-14 22:45) @project(To-do)
   ✔ Backspace doesn't work @done (07-12-14 00:45) @project(To-do)

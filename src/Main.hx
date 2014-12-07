@@ -11,6 +11,9 @@ import luxe.ParcelProgress;
 class Main extends luxe.Game {
     var level :Level;
     public static var words :Array<String>;
+    var step :Int = 0;
+    var titleText :Text;
+    var introText :Text;
 
     override function ready() {
         // Luxe.renderer.clear_color.rgb(0xfdfffc);
@@ -35,7 +38,115 @@ class Main extends luxe.Game {
 
         luxe.tween.Actuate.defaultEase = luxe.tween.easing.Elastic.easeOut;
 
-        level = new Level();
+        var unique_shader = Luxe.renderer.shaders.bitmapfont.shader.clone(); // .font.shader.clone();
+        unique_shader.set_float('thickness', 1);
+        unique_shader.set_float('smoothness', 0.8);
+        unique_shader.set_float('outline', 0.75);
+        unique_shader.set_vector4('outline_color', new Vector(0.0, 0.0, 0.0, 1.0));
+
+        titleText = new Text({
+            pos: Vector.Add(Luxe.screen.mid, new Vector(0, -100)),
+            text: 'Train of Thought',
+            font: Luxe.resources.find_font("rail"),
+            shader: unique_shader,
+            color: new ColorHSV(0, 0, 1),
+            align: center,
+            align_vertical: center,
+            point_size: 64
+        });
+
+        introText = new Text({
+            pos: Vector.Add(Luxe.screen.mid, new Vector(0, 100)),
+            text: 'Press Enter for instructions',
+            font: Luxe.resources.find_font("rail"),
+            shader: unique_shader,
+            color: new ColorHSV(0, 0, 0.6),
+            align: center,
+            align_vertical: center,
+            point_size: 42
+        });
+    }
+
+    override function onkeyup(e :KeyEvent) {
+        if (level != null) return;
+        if (e.keycode != Key.enter) return;
+
+        step++;
+        var unique_shader = Luxe.renderer.shaders.bitmapfont.shader.clone(); // .font.shader.clone();
+        unique_shader.set_float('thickness', 1);
+        unique_shader.set_float('smoothness', 0.8);
+        unique_shader.set_float('outline', 0.75);
+        unique_shader.set_vector4('outline_color', new Vector(0.0, 0.0, 0.0, 1.0));
+        if (step == 1) {
+            titleText.destroy();
+            introText.destroy();
+            titleText = new Text({
+                pos: Vector.Add(Luxe.screen.mid, new Vector(0, -200)),
+                text: 'Instructions',
+                font: Luxe.resources.find_font("rail"),
+                shader: unique_shader,
+                color: new ColorHSV(200, 0, 1),
+                align: center,
+                align_vertical: center,
+                point_size: 64
+            });
+
+            introText = new Text({
+                pos: Vector.Add(Luxe.screen.mid, new Vector(-80, -120)),
+                text: '
+                Type words to create a railway
+                track to the station.
+
+                But hurry before the train departs!
+
+                - - -
+
+                Press Enter for controls',
+                font: Luxe.resources.find_font("rail"),
+                shader: unique_shader,
+                color: new ColorHSV(0, 0, 0.6),
+                align: center,
+                align_vertical: top,
+                point_size: 42
+            });
+        } else if (step == 2) {
+            titleText.destroy();
+            introText.destroy();
+            titleText = new Text({
+                pos: Vector.Add(Luxe.screen.mid, new Vector(0, -200)),
+                text: 'Controls',
+                font: Luxe.resources.find_font("rail"),
+                shader: unique_shader,
+                color: new ColorHSV(100, 0, 1),
+                align: center,
+                align_vertical: center,
+                point_size: 64
+            });
+
+            introText = new Text({
+                pos: Vector.Add(Luxe.screen.mid, new Vector(-90, -150)),
+                text: '
+                Arrow keys - Move the cursor
+                    A to Z - Type letters
+                 Backspace - Erase last letter
+                     Enter - Submit word
+                    Escape - Scrap word
+
+                - - -
+
+                Press Enter to begin',
+                font: Luxe.resources.find_font("rail"),
+                shader: unique_shader,
+                color: new ColorHSV(0, 0, 0.6),
+                align: center,
+                align_vertical: top,
+                point_size: 42
+            });
+        } else {
+            titleText.destroy();
+            introText.destroy();
+            level = new Level();
+        }
     }
 
 } //Main

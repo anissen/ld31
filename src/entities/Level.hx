@@ -238,7 +238,8 @@ class Level extends Entity {
         if (track != null) for (t in track) t.destroy();
         track = new Array<Letter>();
 
-        word.reset();
+        var resetAlreadyUsedWords = (level == 0);
+        word.reset(resetAlreadyUsedWords);
         cursorPos = { x: 0, y: 0 };
 
         grid.reset();
@@ -300,7 +301,7 @@ class Level extends Entity {
         });
         trainTrackIndex = 0;
 
-        trainTimer = Luxe.timer.schedule(trainFirstMoveInterval, function() {
+        trainTimer = Luxe.timer.schedule((level == 0 ? trainFirstMoveInterval * 2 : trainFirstMoveInterval), function() {
             notify('Cho choo!', true);
             moveTrain();
         });
@@ -444,14 +445,14 @@ class Level extends Entity {
         if (nextPos.x < 0 || nextPos.x >= tilesX || nextPos.y < 0 || nextPos.y >= tilesY) {
             Luxe.camera.shake(1);
             this.events.fire('outside_bounds');
-            notify('Stay inside the map please');
+            notify('Stay inside the screen please');
             return;
         }
 
         var letterRep = findLetter(letter);
         if (letterRep == null) {
             Luxe.camera.shake(1);
-            notify('No "$letter"');
+            notify('No $letter');
             this.events.fire('letter_missing', letter);
             return;
         }
