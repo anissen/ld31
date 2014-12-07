@@ -85,9 +85,15 @@ class Level extends Entity {
         },
         {
             title: 'Level Five',
-            start: { x: 3, y: 6 },
-            goal:  { x: 1, y: 5 },
-            via: [ { x: 4, y: 2}, { x: 1, y: 2} ]
+            start: { x: 5, y: 3 },
+            goal:  { x: 6, y: 3 },
+            via: [ { x: 1, y: 1}, { x: 10, y: 5 } ]
+        },
+        {
+            title: 'Final Level',
+            start: { x: 1, y: 1 },
+            goal:  { x: 10, y: 5 },
+            via: [ { x: 0, y: 0 }, { x: 0, y: 6 }, { x: 11, y: 0 }, { x: 11, y: 6 }, { x: 5, y: 3 } ]
         }
     ];
 
@@ -105,6 +111,7 @@ class Level extends Entity {
             setCursor(data.start, false);
         });
         word.events.listen('word.wrong', function(data :WrongWordEvent) {
+            if (gameOver) return;
             Luxe.camera.shake(10);
             setCursor(data.start, true);
             availableLetters = availableLetters.concat(data.letters);
@@ -129,10 +136,13 @@ class Level extends Entity {
             repositionLetters();
         });
         word.events.listen('word.correct', function(data :CorrectWordEvent) {
+            if (gameOver) return;
+
             if (track.length > 0) {
                 track[track.length - 1].hide();
             }
-
+            
+            var isVia = false;
             for (letter in data.letters) {
                 if (letter != data.letters[data.letters.length - 1]) {
                     letter.hide();
@@ -147,7 +157,6 @@ class Level extends Entity {
                     color: letter.color
                 });
 
-                var isVia = false;
                 var viaPointsToRemove = [];
                 for (via in viaPoints) {
                     if (letter.gridPos.x == via.x && letter.gridPos.y == via.y) {
@@ -169,13 +178,6 @@ class Level extends Entity {
                         }
                     }
                 }
-                if (isVia && !gameOver) notify("You got a via point!");
-                // var acceptableRange = 0;
-                // if (Math.abs(cursorPos.x - goal.x) + Math.abs(cursorPos.y - goal.y) <= acceptableRange) {
-                //     gameOver = true;
-                //     level++;
-                //     notify("You won! Press any key.");
-                // }
             }
 
             track = track.concat(data.letters);
@@ -218,6 +220,8 @@ class Level extends Entity {
                 availableLetters.push(createNewLetter());
             }
             repositionLetters();
+            if (isVia) notify("You got a via point!");
+
             cursorPos = { x: data.end.x, y: data.end.y };
             cursorPos = getNextPos();
             setCursor(cursorPos, true);
@@ -275,7 +279,7 @@ class Level extends Entity {
         cursor.geometry.vertices[2].color = new ColorHSV(60, 0.7, 1, 0.8);
 
         createStartLetter(grid.getPos(start.x, start.y));
-        createStartLetter(grid.getPos(goal.x, goal.y));
+        createStartLetter(grid.getPos(goal.x, goal.y), true);
 
         viaPoints = levelData.via;
         for (via in levelData.via) {
@@ -349,6 +353,7 @@ class Level extends Entity {
         if (gameOver) return;
         if (trainTrackIndex >= track.length) {
             gameOver = true;
+            Luxe.camera.shake(50);
             notify("You lost! Press any key.", true);
             level = 0;
             particles.stop();
@@ -519,10 +524,10 @@ class Level extends Entity {
         });
     }
 
-    function createStartLetter(pos :Vector) {
+    function createStartLetter(pos :Vector, isGoal :Bool = false) {
         return new Letter({
             pos: pos,
-            color: new ColorHSV(10, 0.6, 1),
+            color: new ColorHSV(10, 0.6, 1, (isGoal ? 1 : 0.5)),
             r: tileSize / 3,
             letter: ' ',
             textColor: new ColorHSV(10, 0.1, 1),
@@ -605,12 +610,12 @@ class Level extends Entity {
             case Key.down:  setDirection(Down);
             case Key.left:  setDirection(Left);
             case Key.right: setDirection(Right);
-            case Key.space: setDirection(switch (direction) {
-                case Up: Right;
-                case Right: Down;
-                case Down: Left;
-                case Left: Up;
-            });
+            // case Key.space: setDirection(switch (direction) {
+            //     case Up: Right;
+            //     case Right: Down;
+            //     case Down: Left;
+            //     case Left: Up;
+            // });
             case Key.backspace: word.erase();
             case Key.enter: word.submit();
             case Key.escape: word.abort();
