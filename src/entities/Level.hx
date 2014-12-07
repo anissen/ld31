@@ -12,6 +12,10 @@ import phoenix.geometry.LineGeometry;
 import luxe.options.GeometryOptions.LineGeometryOptions;
 import luxe.Vector;
 import luxe.Color;
+import luxe.Particles;
+import luxe.Sprite;
+
+import phoenix.Batcher;
 
 import structures.LetterFrequencies;
 import structures.LevelGrid;
@@ -43,6 +47,8 @@ class Level extends Entity {
     var trainFirstMoveInterval = 30;
     var trainInitialMoveInterval = 2;
     var trainMoveInterval :Int;
+
+    var particles :ParticleSystem;
 
     public function new() {
         super({ name: 'Level' });
@@ -212,13 +218,57 @@ class Level extends Entity {
         Luxe.timer.schedule(trainFirstMoveInterval, function() {
             moveTrain();
         });
+
+        setupParticles();
+    }
+
+    function setupParticles() {
+        particles = new ParticleSystem({name:'particles'});
+
+        var t2 = Luxe.resources.find_texture('assets/particles/smoke.png');
+
+        particles.add_emitter({
+            name : 'smoke',
+            particle_image : t2,
+            start_color: new Color(255, 255, 255, 1),
+            end_color: new Color(255, 255, 255, 0),
+            start_size: new Vector(16,16),
+            end_size: new Vector(32,32),
+            gravity: new Vector(0, -30),
+            life: 5.0,
+            end_speed: 0,
+            depth: 3,
+            group: 5,
+            emit_time: 0.5,
+            pos_offset: new Vector(25, -25),
+            pos_random: new Vector(2, 2)
+        });
+        
+        particles.stop();
+
+        particles.pos = train.pos.clone();
+        train.transform.listen_pos(function(_) {
+            particles.pos = train.pos.clone();
+        });
+
+        Luxe.renderer.batcher.add_group(5,
+            function(b:Batcher){
+                Luxe.renderer.blend_mode(BlendMode.src_alpha, BlendMode.one);
+            },
+            function(b:Batcher){
+                Luxe.renderer.blend_mode();
+            }
+        );
     }
 
     function moveTrain() {
         if (trainTrackIndex >= track.length) {
             trace('You lose!');
+            particles.stop();
             return;
         }
+
+        particles.start();
 
         var trainTrackLetter = track[trainTrackIndex];
         
