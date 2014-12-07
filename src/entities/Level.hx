@@ -41,7 +41,7 @@ class Level extends Entity {
     var train :Visual;
     var trainTrackIndex :Int;
     var trainFirstMoveInterval = 30;
-    var trainInitialMoveInterval = 6;
+    var trainInitialMoveInterval = 2;
     var trainMoveInterval :Int;
 
     public function new() {
@@ -219,9 +219,6 @@ class Level extends Entity {
             trace('You lose!');
             return;
         }
-        if (trainMoveInterval > 2) {
-            trainMoveInterval -= 1;
-        }
 
         var trainTrackLetter = track[trainTrackIndex];
         
@@ -235,8 +232,8 @@ class Level extends Entity {
             .ease(Linear.easeNone);
 
         Actuate
-            .tween(train.pos, trainMoveInterval / 10, { x: trainTrackLetter.pos.x, y: trainTrackLetter.pos.y })
-            .ease(Quad.easeInOut);
+            .tween(train.pos, trainMoveInterval, { x: trainTrackLetter.pos.x, y: trainTrackLetter.pos.y })
+            .ease(Linear.easeNone);
         trainTrackIndex++;
         Luxe.timer.schedule(trainMoveInterval, moveTrain);
     }
