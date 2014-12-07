@@ -176,6 +176,8 @@ class Word extends Entity {
             return;   
         }
 
+        trace('$word is correct!');
+
         wordlist.use(word);
 
         this.events.fire('word.correct', { word: word, letters: (letters :Array<Letter>), end: positions[positions.length - 1] });
@@ -273,7 +275,7 @@ class Level extends Entity {
         grid.reset();
 
         for (cell in grid.tiles()) {
-            var box = Luxe.draw.box({
+            Luxe.draw.box({
                 x: cell.pos.x - tileSize / 2,
                 y: cell.pos.y - tileSize / 2,
                 w: tileSize,
@@ -303,6 +305,12 @@ class Level extends Entity {
         });
         cursor.geometry.vertices[2].color = new ColorHSV(60, 0.7, 1, 0.8);
 
+        createStartLetter(grid.getPos(startX, startY));
+
+        var startX = tilesX - 1;
+        var startY = tilesY - 1;
+        createGoalLetter(grid.getPos(startX, startY));
+
         setDirection(Right);
 
     }
@@ -319,14 +327,7 @@ class Level extends Entity {
         if (word.is_entering_word()) return;
 
         direction = _direction;
-        var angle = switch (direction) {
-            case Right: 0;
-            case Down:  90;
-            case Left:  180;
-            case Up:    270;
-        }; 
-        Actuate
-            .tween(cursor, 0.5, { rotation_z: angle });
+        setCursor(cursorPos, true);
     }
 
     function findLetter(letter :String) :Null<Letter> {
@@ -345,14 +346,9 @@ class Level extends Entity {
 
         availableLetters.remove(letterRep);
 
-        switch (direction) {
-            case Up:    cursorPos.y -= 1;
-            case Down:  cursorPos.y += 1;
-            case Left:  cursorPos.x -= 1;
-            case Right: cursorPos.x += 1;
-        };
-
+        cursorPos = getNextPos();
         word.addLetter(letter, letterRep, cursorPos.x, cursorPos.y, direction);
+
         var pos = grid.getPos(cursorPos.x, cursorPos.y);
         letterRep.gridPos = { x: cursorPos.x, y: cursorPos.y };
         Actuate
@@ -382,9 +378,42 @@ class Level extends Entity {
         });
     }
 
+    function createStartLetter(pos :Vector) {
+        return new Letter({
+            pos: pos,
+            color: new ColorHSV(10, 0.6, 1),
+            r: tileSize / 3,
+            letter: ' ',
+            textColor: new ColorHSV(10, 0.1, 1),
+            borderColor: new Vector(0, 0, 0, 1)
+        });
+    }
+
+    function getNextPos() {
+        var tempPos = { x: cursorPos.x, y: cursorPos.y };
+        switch (direction) {
+            case Up:    tempPos.y -= 1;
+            case Down:  tempPos.y += 1;
+            case Left:  tempPos.x -= 1;
+            case Right: tempPos.x += 1;
+        };
+        return tempPos;
+    }
+
     function setCursor(pos :Pos, visible :Bool) {
         cursorPos = { x: pos.x, y: pos.y };
-        cursor.pos = grid.getPos(pos.x, pos.y);
+        var angle = switch (direction) {
+            case Right: 0;
+            case Down:  90;
+            case Left:  180;
+            case Up:    270;
+        };
+        var nextPos = getNextPos();
+        var visualCursorPos = grid.getPos(nextPos.x, nextPos.y);
+        Actuate
+            .tween(cursor.pos, 0.5, { x: visualCursorPos.x, y: visualCursorPos.y });
+        Actuate
+            .tween(cursor, 0.5, { rotation_z: angle });
         showCursor(visible);
     }
 
