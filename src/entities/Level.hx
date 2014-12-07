@@ -251,7 +251,7 @@ class Level extends Entity {
         });
         word.events.listen('word.erase', function(data :EraseWordEvent) {
             availableLetters.push(data.erasedLetter);
-            cursorPos = { x: data.end.x, y: data.end.y };
+            setCursor(data.end, false);
             repositionLetters();
         });
         word.events.listen('word.correct', function(data :CorrectWordEvent) {
@@ -263,17 +263,19 @@ class Level extends Entity {
                 availableLetters.push(createNewLetter());
             }
             repositionLetters();
-            setCursor(data.end, true);
+            cursorPos = { x: data.end.x, y: data.end.y };
+            cursorPos = getNextPos();
+            setCursor(cursorPos, true);
             
             var goalX = (tilesX - 2);
             var goalY = (tilesY - 2);
-            if (Math.abs(data.end.x - goalX) < 2 && Math.abs(data.end.y - goalY) < 2) {
+            if (Math.abs(cursorPos.x - goalX) + Math.abs(cursorPos.y - goalY) == 1) {
                 trace('you won!');
             }
         });
     }
 
-    override function init() {
+    function newLevel(start :Pos, goal :Pos) {
         availableLetters = new Array<Letter>();
         word.reset();
         cursorPos = { x: 0, y: 0 };
@@ -295,12 +297,10 @@ class Level extends Entity {
         }
         repositionLetters();
 
-        var startX = 1;
-        var startY = 3;
-        cursorPos.x = startX;
-        cursorPos.y = startY;
+        cursorPos.x = start.x;
+        cursorPos.y = start.y;
         cursor = new Visual({
-            pos: grid.getPos(startX, startY),
+            pos: grid.getPos(start.x, start.y),
             color: new ColorHSV(30, 0.7, 1, 0.5), 
             geometry: Luxe.draw.ngon({
                 sides: 3,
@@ -311,14 +311,17 @@ class Level extends Entity {
         });
         cursor.geometry.vertices[2].color = new ColorHSV(60, 0.7, 1, 0.8);
 
-        createStartLetter(grid.getPos(startX, startY));
-
-        var startX = tilesX - 2;
-        var startY = tilesY - 2;
-        createStartLetter(grid.getPos(startX, startY));
+        createStartLetter(grid.getPos(start.x, start.y));
+        createStartLetter(grid.getPos(goal.x, goal.y));
 
         setDirection(Right);
+    }
 
+    override function init() {
+        // TODO: Be able to pass level data in
+        var start = { x: 1, y: 3};
+        var goal  = { x: tilesX - 2, y: tilesY - 2 };
+        newLevel(start, goal);
     }
 
     function getRandomLetter() :String {
@@ -353,17 +356,20 @@ class Level extends Entity {
 
         availableLetters.remove(letterRep);
 
-        cursorPos = getNextPos();
         word.addLetter(letter, letterRep, cursorPos.x, cursorPos.y, direction);
-
+        cursorPos = getNextPos();
+        
         var pos = grid.getPos(cursorPos.x, cursorPos.y);
         letterRep.gridPos = { x: cursorPos.x, y: cursorPos.y };
         Actuate
             .tween(letterRep.pos, 0.5, { x: pos.x, y: pos.y });
-        Actuate
-            .tween(cursor.pos, 0.5, { x: pos.x, y: pos.y });
-
+        setCursor(cursorPos, true);
+        
         repositionLetters();
+    }
+
+    function addLetter() {
+
     }
 
     function createNewLetter() {
