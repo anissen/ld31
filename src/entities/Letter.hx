@@ -6,12 +6,14 @@ import luxe.Text;
 import luxe.Color;
 import luxe.Vector;
 
+import entities.Word;
+
 class Letter extends Visual {
     var text :Text;
     public var letter (default, null) :String;
-    // public var directionFrom :Direction;
-    // public var directionTo :Direction;
+    public var direction :Direction;
     public var gridPos :{ x :Int, y :Int };
+    public var track :Visual;
 
     public function new(_options: { pos :Vector, r :Float, color :Color, letter :String, textColor :Color, borderColor :Vector  }) {
         super({

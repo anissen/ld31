@@ -29,6 +29,7 @@ class Level extends Entity {
     var tileSize = 80;
     var startingLetterCount = 12;
 
+    var track :Array<Letter>;
     var availableLetters :Array<Letter>;
     var cursor :Visual;
     var cursorPos :{ x: Int, y :Int };
@@ -72,37 +73,61 @@ class Level extends Entity {
             repositionLetters();
         });
         word.events.listen('word.correct', function(data :CorrectWordEvent) {
-            for (letter in data.letters) {
-                // letter.color.tween(0.5, { v: 0.3 });
-                // letter.visible = false;
-                // if (letter == data.letters[0]) {
-                //     letter.directionFrom = lastUsedDirection;
-                // } else if (letter != data.letters[data.letters.length - 1]) {
-                //     letter.directionTo = lastUsedDirection;
-                // } else {
-                //     letter.directionFrom = direction;
-                // }
-                // letter.directionTo = direction;
+            if (track.length > 0) {
+                track[track.length - 1].hide();
+            }
 
+            for (letter in data.letters) {
                 if (letter != data.letters[data.letters.length - 1]) {
                     letter.hide();
                 }
-                // var texture;
-                // var rotation;
-                // switch (direction) {
-                //     case Left: Luxe.resources.find_texture("assets/images/track_straight.png");
-                //     case Up, Down: Luxe.resources.find_texture("assets/images/track_straight.png");
-                // };
-                var bend = ((direction == Up || direction == Down) && (lastUsedDirection == Left || lastUsedDirection == Right)) || ((lastUsedDirection == Up || lastUsedDirection == Down) && (direction == Left || direction == Right));
-                var texture = (bend ? Luxe.resources.find_texture("assets/images/track_bend.png") : Luxe.resources.find_texture("assets/images/track_straight.png"));
-                new Visual({
-                    pos: new Vector(tileSize / 2, -tileSize / 2 - 2),
+                letter.direction = direction;
+                letter.track = new Visual({
+                    origin: new Vector(tileSize / 2, tileSize / 2),
                     size: new Vector(130, 130),
-                    texture: texture,
-                    rotation_z: 90,
+                    texture: Luxe.resources.find_texture("assets/images/track_straight.png"),
+                    rotation_z: ((direction == Left || direction == Right) ? 90 : 0),
                     parent: letter,
                     color: letter.color
                 });
+            }
+
+            track = track.concat(data.letters);
+            for (i in 1 ... track.length) {
+                // var texture = (bend ? Luxe.resources.find_texture("assets/images/track_bend.png") : Luxe.resources.find_texture("assets/images/track_straight.png"));
+                var last = track[i - 1];
+                var t = track[i];
+                if (last.direction == t.direction) continue;
+
+                // Corner
+                // var bend = ((t.direction == Up || t.direction == Down) && (last.direction == Left || last.direction == Right)) || ((last.direction == Up || last.direction == Down) && (t.direction == Left || t.direction == Right));
+                last.track.texture = Luxe.resources.find_texture("assets/images/track_bend.png");
+
+                // Reversed because direction left means coming from the right
+                var first = switch (last.direction) {
+                    case Up: 'U';
+                    case Down: 'D';
+                    case Left: 'R';
+                    case Right: 'L';
+                };
+                var second = switch (t.direction) {
+                    case Up: 'U';
+                    case Down: 'D';
+                    case Left: 'L';
+                    case Right: 'R';
+                };
+
+                last.track.rotation_z = switch (first + second) {
+                    case 'UR': 0;
+                    case 'UL': 90;
+                    case 'DR': 270;
+                    case 'DL': 180;
+                    case 'LU': 180;
+                    case 'LD': 90;
+                    case 'RU': 270;
+                    case 'RD': 0;
+                    default: 0;
+                };
             }
 
             lastUsedDirection = direction;
@@ -125,6 +150,7 @@ class Level extends Entity {
 
     function newLevel(start :Pos, goal :Pos, removeTiles :Array<Pos>) {
         availableLetters = new Array<Letter>();
+        track = new Array<Letter>();
         word.reset();
         cursorPos = { x: 0, y: 0 };
 
