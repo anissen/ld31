@@ -48,6 +48,10 @@ class Level extends Entity {
     var trainInitialMoveInterval = 2;
     var trainMoveInterval :Int;
 
+    var infoText :Text;
+
+    var gameOver :Bool;
+
     var particles :ParticleSystem;
 
     public function new() {
@@ -68,12 +72,14 @@ class Level extends Entity {
             setCursor(data.start, true);
             availableLetters = availableLetters.concat(data.letters);
             repositionLetters();
+            if (data.word.length < 3) notify("Too short");
         });
         word.events.listen('word.already_used', function(data :AlreadyUsedWordEvent) {
             Luxe.camera.shake(10);
             setCursor(data.start, true);
             availableLetters = availableLetters.concat(data.letters);
             repositionLetters();
+            notify("Already used");
         });
         word.events.listen('word.abort', function(data :AbortWordEvent) {
             setCursor(data.start, true);
@@ -154,7 +160,8 @@ class Level extends Entity {
             var goalX = (tilesX - 2);
             var goalY = (tilesY - 2);
             if (Math.abs(cursorPos.x - goalX) + Math.abs(cursorPos.y - goalY) == 1) {
-                trace('you won!');
+                gameOver = true;
+                notify("You won!");
             }
         });
     }
@@ -216,8 +223,12 @@ class Level extends Entity {
         trainTrackIndex = 0;
 
         Luxe.timer.schedule(trainFirstMoveInterval, function() {
+            notify('Cho choo!', true);
             moveTrain();
         });
+
+        infoText = null;
+        gameOver = false;
 
         setupParticles();
     }
@@ -263,7 +274,8 @@ class Level extends Entity {
 
     function moveTrain() {
         if (trainTrackIndex >= track.length) {
-            trace('You lose!');
+            gameOver = true;
+            notify("You lost!", true);
             particles.stop();
             return;
         }
@@ -318,6 +330,7 @@ class Level extends Entity {
     }
 
     public function reset() {
+        Luxe.scene.destroy();
         init();
     }
 
@@ -336,9 +349,18 @@ class Level extends Entity {
     }
 
     function enterLetter(letter :String) {
+        var nextPos = getNextPos();
+        if (nextPos.x < 0 || nextPos.x >= tilesX || nextPos.y < 0 || nextPos.y >= tilesY) {
+            Luxe.camera.shake(1);
+            this.events.fire('outside_bounds');
+            notify('You cannot go that way');
+            return;
+        }
+
         var letterRep = findLetter(letter);
         if (letterRep == null) {
             Luxe.camera.shake(1);
+            notify('No "$letter"');
             this.events.fire('letter_missing', letter);
             return;
         }
@@ -355,6 +377,40 @@ class Level extends Entity {
         setCursor(cursorPos, true);
         
         repositionLetters();
+    }
+
+    function notify(text: String, info :Bool = true) {
+        var count = 0;
+        for (l in availableLetters) {
+            var pos = grid.getPos(count++, tilesY + 1);
+            Actuate
+                .tween(l.pos, 0.3, { y: pos.y })
+                .delay(0.03 * count);
+        }
+
+        var unique_shader = Luxe.renderer.shaders.bitmapfont.shader.clone(); // .font.shader.clone();
+        unique_shader.set_float('thickness', 1);
+        unique_shader.set_float('smoothness', 0.8);
+        unique_shader.set_float('outline', 0.75);
+        unique_shader.set_vector4('outline_color', (info ? new Vector(0.0, 0.0, 0.8, 1.0) : new Vector(0.8, 0.0, 0.0, 1.0)));
+
+        infoText = new Text({
+            pos: new Vector(Luxe.screen.w / 2, (tilesY + 1 + 0.5) * tileSize),
+            text: text,
+            font: Luxe.resources.find_font("rail"),
+            shader: unique_shader,
+            color: new ColorHSV(0, 0, 1),
+            align: center,
+            align_vertical: center,
+            point_size: 52
+        });
+        Actuate
+            .tween(infoText.pos, 0.3, { y: (tilesY + 0.5) * tileSize })
+            .delay(0.2);
+
+        Luxe.timer.schedule(0.9, function () {
+            repositionLetters();
+        });
     }
 
     function createNewLetter() {
@@ -422,6 +478,9 @@ class Level extends Entity {
     }
 
     function repositionLetters() {
+        if (gameOver) return;
+        if (infoText != null) infoText.destroy();
+
         availableLetters.sort(function(a :Letter, b :Letter) {
             if (a.letter < b.letter) return -1;
             if (a.letter > b.letter) return 1;
@@ -439,6 +498,7 @@ class Level extends Entity {
     }
 
     override function onkeyup(e :KeyEvent) {
+        if (gameOver) reset();
         switch (e.keycode) {
             case Key.up:    setDirection(Up);
             case Key.down:  setDirection(Down);

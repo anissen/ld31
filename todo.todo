@@ -5,11 +5,12 @@ To-do:
     ✔ Input words @done (07-12-14 19:34)
     ✔ Start, goal @done (07-12-14 19:34)
     ✔ Ensure vowels, consonants @done (07-12-14 19:45)
-    ☐ Stay inside map
-    ☐ Words in wrong direction??
-
+    ✔ Stay inside map @done (07-12-14 21:10)
+    ✘ Words in wrong direction?? @cancelled (07-12-14 20:32)
+    ☐ Ensure cursor position is valid
 
     Generel:
+    ☐ X, J, Q should slow down
     ☐ Cannot reset game
     ☐ Game screens
         ☐ Title screen
