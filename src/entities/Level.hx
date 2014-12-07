@@ -91,12 +91,12 @@ typedef AlreadyUsedWordEvent = {
 
 class Word extends Entity {
     var firstLetter :String;
-    var word (get, null) :String;
+    var word (get, never) :String;
+    var currentWord :String;
     var positions :Array<Pos>;
     var direction :Direction;
     var wordlist :WordList;
     var letters :Array<Letter>;
-    // var firstWord :Bool;
     var enteringWord :Bool;
 
     public function new() {
@@ -109,7 +109,7 @@ class Word extends Entity {
 
     public function reset() {
         firstLetter = "";
-        word = "";
+        currentWord = "";
         enteringWord = false;
         letters = [];
         positions = [];
@@ -117,7 +117,7 @@ class Word extends Entity {
     }
 
     function get_word() {
-        return (firstLetter + word).toLowerCase();
+        return (firstLetter + currentWord).toLowerCase();
     }
 
     function startWord( _direction :Direction) {
@@ -128,7 +128,7 @@ class Word extends Entity {
     }
 
     public function addLetter(_letter :String, _letterRep :Letter, _x :Int, _y :Int, _direction :Direction) {
-        word += _letter;
+        currentWord += _letter;
         letters.push(_letterRep);
         positions.push({ x: _x, y: _y });
 
@@ -147,7 +147,7 @@ class Word extends Entity {
 
         this.events.fire('word.abort', { word: word, letters: letters, start: positions[0] });
 
-        word = "";
+        currentWord = "";
         letters = [];
         positions = [];
     }
@@ -161,7 +161,7 @@ class Word extends Entity {
         if (!wordlist.isValid(word)) {
             trace('$word is an invalid word!');
             this.events.fire('word.wrong', { word: word, letters: letters, start: positions[0] });
-            word = "";
+            currentWord = "";
             letters = [];
             positions = [];
             return;
@@ -170,7 +170,7 @@ class Word extends Entity {
         if (wordlist.usageCount(word) > 0) {
             trace('$word has already been used!');
             this.events.fire('word.already_used', { word: word, letters: letters, start: positions[0] });
-            word = "";
+            currentWord = "";
             letters = [];
             positions = [];
             return;   
@@ -184,19 +184,19 @@ class Word extends Entity {
 
         // start with the last letter of last word
         firstLetter = word.substr(word.length - 1);
-        word = "";
+        currentWord = "";
         letters = [];
         positions = [];
     }
 
     public function erase() {
-        if (word.length == 0) {
+        if (currentWord.length == 0) {
             enteringWord = false;
             return;
         }
         
         trace('erase: $word');
-        word = word.substr(0, word.length - 1);
+        currentWord = currentWord.substr(0, currentWord.length - 1);
         this.events.fire('word.erase', { erasedLetter: letters.pop(), end: positions.pop() });
     }
 
@@ -264,6 +264,12 @@ class Level extends Entity {
             }
             repositionLetters();
             setCursor(data.end, true);
+            
+            var goalX = (tilesX - 2);
+            var goalY = (tilesY - 2);
+            if (Math.abs(data.end.x - goalX) < 2 && Math.abs(data.end.y - goalY) < 2) {
+                trace('you won!');
+            }
         });
     }
 
@@ -307,9 +313,9 @@ class Level extends Entity {
 
         createStartLetter(grid.getPos(startX, startY));
 
-        var startX = tilesX - 1;
-        var startY = tilesY - 1;
-        createGoalLetter(grid.getPos(startX, startY));
+        var startX = tilesX - 2;
+        var startY = tilesY - 2;
+        createStartLetter(grid.getPos(startX, startY));
 
         setDirection(Right);
 
@@ -340,8 +346,9 @@ class Level extends Entity {
     function enterLetter(letter :String) {
         var letterRep = findLetter(letter);
         if (letterRep == null) {
+            Luxe.camera.shake(1);
             this.events.fire('letter_missing', letter);
-            return;   
+            return;
         }
 
         availableLetters.remove(letterRep);
