@@ -58,6 +58,38 @@ class Level extends Entity {
     var trainTimer :snow.utils.Timer;
 
     var level :Int;
+    var levels = [
+        {
+            title: 'Level One',
+            start: { x: 3, y: 3 },
+            goal:  { x: 7, y: 3 },
+            via: []
+        },
+        {
+            title: 'Level Two',
+            start: { x: 1, y: 3 },
+            goal:  { x: 10, y: 5 },
+            via: []
+        },
+        {
+            title: 'Level Three',
+            start: { x: 1, y: 1 },
+            via: [ { x: 4, y: 4} ],
+            goal:  { x: 8, y: 6 }
+        },
+        {
+            title: 'Level Four',
+            start: { x: 8, y: 5 },
+            goal:  { x: 10, y: 5 },
+            via: [ { x: 1, y: 2} ]
+        },
+        {
+            title: 'Level Five',
+            start: { x: 3, y: 6 },
+            goal:  { x: 1, y: 5 },
+            via: [ { x: 4, y: 2}, { x: 1, y: 2} ]
+        }
+    ];
 
     public function new() {
         super({ name: 'Level' });
@@ -114,6 +146,36 @@ class Level extends Entity {
                     parent: letter,
                     color: letter.color
                 });
+
+                var isVia = false;
+                var viaPointsToRemove = [];
+                for (via in viaPoints) {
+                    if (letter.gridPos.x == via.x && letter.gridPos.y == via.y) {
+                        viaPointsToRemove.push(via);
+                        isVia = true;
+                    }
+                }
+                for (via in viaPointsToRemove) {
+                    viaPoints.remove(via);
+                }
+                if (viaPoints.length == 0) {
+                    if (letter.gridPos.x == goal.x && letter.gridPos.y == goal.y) {
+                        gameOver = true;
+                        level++;
+                        if (level < levels.length) {
+                            notify("Level completed! Press any key.");
+                        } else {
+                            notify("You won the game!");
+                        }
+                    }
+                }
+                if (isVia && !gameOver) notify("You got a via point!");
+                // var acceptableRange = 0;
+                // if (Math.abs(cursorPos.x - goal.x) + Math.abs(cursorPos.y - goal.y) <= acceptableRange) {
+                //     gameOver = true;
+                //     level++;
+                //     notify("You won! Press any key.");
+                // }
             }
 
             track = track.concat(data.letters);
@@ -159,13 +221,6 @@ class Level extends Entity {
             cursorPos = { x: data.end.x, y: data.end.y };
             cursorPos = getNextPos();
             setCursor(cursorPos, true);
-            
-            var acceptableRange = 0;
-            if (Math.abs(cursorPos.x - goal.x) + Math.abs(cursorPos.y - goal.y) <= acceptableRange) {
-                gameOver = true;
-                level++;
-                notify("You won! Press any key.");
-            }
         });
     }
 
@@ -221,6 +276,11 @@ class Level extends Entity {
 
         createStartLetter(grid.getPos(start.x, start.y));
         createStartLetter(grid.getPos(goal.x, goal.y));
+
+        viaPoints = levelData.via;
+        for (via in levelData.via) {
+            createViaLetter(grid.getPos(via.x, via.y));            
+        }
 
         setDirection(Right);
 
@@ -343,26 +403,6 @@ class Level extends Entity {
     }
 
     public function reset() {
-        var levels = [
-            {
-                title: 'Level One',
-                start: { x: 3, y: 3 },
-                goal:  { x: 6, y: 3 },
-                via: []
-            },
-            {
-                title: 'Level Two',
-                start: { x: 1, y: 3 },
-                goal:  { x: 10, y: 5 },
-                via: []
-            },
-            {
-                title: 'Level Three',
-                start: { x: 8, y: 5 },
-                goal:  { x: 10, y: 5 },
-                via: [ { x: 1, y: 2} ]
-            }
-        ];
         newLevel(levels[level % levels.length]);
     }
 
@@ -485,6 +525,17 @@ class Level extends Entity {
             color: new ColorHSV(10, 0.6, 1),
             r: tileSize / 3,
             letter: ' ',
+            textColor: new ColorHSV(10, 0.1, 1),
+            borderColor: new Vector(0, 0, 0, 1)
+        });
+    }
+
+    function createViaLetter(pos :Vector) {
+        return new Letter({
+            pos: pos,
+            color: new ColorHSV(200, 0.6, 1),
+            r: tileSize / 4,
+            letter: '',
             textColor: new ColorHSV(10, 0.1, 1),
             borderColor: new Vector(0, 0, 0, 1)
         });
