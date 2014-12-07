@@ -40,6 +40,8 @@ class Level extends Entity {
     var cursorPos :{ x: Int, y :Int };
     var direction :Direction;
     var word :Word;
+    var goal :Pos;
+    var viaPoints :Array<Pos>;
 
     var train :Visual;
     var trainTrackIndex :Int;
@@ -52,6 +54,10 @@ class Level extends Entity {
     var gameOver :Bool;
 
     var particles :ParticleSystem;
+
+    var trainTimer :snow.utils.Timer;
+
+    var level :Int;
 
     public function new() {
         super({ name: 'Level' });
@@ -154,18 +160,18 @@ class Level extends Entity {
             cursorPos = getNextPos();
             setCursor(cursorPos, true);
             
-            var goalX = (tilesX - 2);
-            var goalY = (tilesY - 2);
             var acceptableRange = 0;
-            if (Math.abs(cursorPos.x - goalX) + Math.abs(cursorPos.y - goalY) <= acceptableRange) {
+            if (Math.abs(cursorPos.x - goal.x) + Math.abs(cursorPos.y - goal.y) <= acceptableRange) {
                 gameOver = true;
-                notify("You won!");
+                level++;
+                notify("You won! Press any key.");
             }
         });
     }
 
-    function newLevel(start :Pos, goal :Pos, removeTiles :Array<Pos>) {
+    function newLevel(levelData :{ title :String, start :Pos, goal :Pos, via :Array<Pos> }) {
         gameOver = false;
+        if (trainTimer != null) trainTimer.stop();
 
         if (availableLetters != null) for (l in availableLetters) l.destroy();
         availableLetters = new Array<Letter>();
@@ -177,9 +183,6 @@ class Level extends Entity {
         cursorPos = { x: 0, y: 0 };
 
         grid.reset();
-        for (t in removeTiles) {
-            grid.removeCell(t.x, t.y);
-        }
 
         for (cell in grid.tiles()) {
             Luxe.draw.box({
@@ -199,6 +202,8 @@ class Level extends Entity {
         }
         repositionLetters();
 
+        var start = levelData.start;
+        goal = levelData.goal;
         cursorPos.x = start.x;
         cursorPos.y = start.y;
         if (cursor != null) cursor.destroy();
@@ -231,12 +236,14 @@ class Level extends Entity {
         });
         trainTrackIndex = 0;
 
-        Luxe.timer.schedule(trainFirstMoveInterval, function() {
+        trainTimer = Luxe.timer.schedule(trainFirstMoveInterval, function() {
             notify('Cho choo!', true);
             moveTrain();
         });
 
         setupParticles();
+
+        notify(levelData.title);
     }
 
     function setupParticles() {
@@ -282,7 +289,8 @@ class Level extends Entity {
         if (gameOver) return;
         if (trainTrackIndex >= track.length) {
             gameOver = true;
-            notify("You lost!", true);
+            notify("You lost! Press any key.", true);
+            level = 0;
             particles.stop();
             return;
         }
@@ -308,10 +316,8 @@ class Level extends Entity {
     }
 
     override function init() {
-        // TODO: Be able to pass level data in
-        var start = { x: 1, y: 3};
-        var goal  = { x: tilesX - 2, y: tilesY - 2 };
-        newLevel(start, goal, [{ x: start.x + 1, y: start.y }, { x: start.x + 1, y: start.y + 1 }]);
+        level = 0;
+        reset();
     }
 
     function getRandomLetter() :String {
@@ -337,7 +343,27 @@ class Level extends Entity {
     }
 
     public function reset() {
-        init();
+        var levels = [
+            {
+                title: 'Level One',
+                start: { x: 3, y: 3 },
+                goal:  { x: 6, y: 3 },
+                via: []
+            },
+            {
+                title: 'Level Two',
+                start: { x: 1, y: 3 },
+                goal:  { x: 10, y: 5 },
+                via: []
+            },
+            {
+                title: 'Level Three',
+                start: { x: 8, y: 5 },
+                goal:  { x: 10, y: 5 },
+                via: [ { x: 1, y: 2} ]
+            }
+        ];
+        newLevel(levels[level % levels.length]);
     }
 
     function setDirection(_direction :Direction) {
@@ -519,7 +545,10 @@ class Level extends Entity {
     }
 
     override function onkeyup(e :KeyEvent) {
-        if (gameOver) reset();
+        if (gameOver) {
+            reset();
+            return;
+        }
         switch (e.keycode) {
             case Key.up:    setDirection(Up);
             case Key.down:  setDirection(Down);
