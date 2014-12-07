@@ -1,8 +1,19 @@
 
 To-do:
 
+    Priority:
+    ☐ Input words
+
+
     Generel:
     ☐ Cannot reset game
+    ☐ Game screens
+        ☐ Title screen
+        ☐ Menu screen
+        ☐ Game screen
+    ☐ [Idea] Local highscore
+    ☐ [Idea] Global highscore
+    ☐ [Idea] Speak entered words
 
     Cursor:
     ☐ Make cursor invisible when entering word
