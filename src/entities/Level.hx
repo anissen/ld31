@@ -156,7 +156,8 @@ class Level extends Entity {
             
             var goalX = (tilesX - 2);
             var goalY = (tilesY - 2);
-            if (Math.abs(cursorPos.x - goalX) + Math.abs(cursorPos.y - goalY) == 1) {
+            var acceptableRange = 0;
+            if (Math.abs(cursorPos.x - goalX) + Math.abs(cursorPos.y - goalY) <= acceptableRange) {
                 gameOver = true;
                 notify("You won!");
             }
@@ -165,7 +166,7 @@ class Level extends Entity {
 
     function newLevel(start :Pos, goal :Pos, removeTiles :Array<Pos>) {
         gameOver = false;
-        
+
         if (availableLetters != null) for (l in availableLetters) l.destroy();
         availableLetters = new Array<Letter>();
 
@@ -278,6 +279,7 @@ class Level extends Entity {
     }
 
     function moveTrain() {
+        if (gameOver) return;
         if (trainTrackIndex >= track.length) {
             gameOver = true;
             notify("You lost!", true);
@@ -350,7 +352,7 @@ class Level extends Entity {
                 case Right: lastDirection != Left;
             };
             if (!validDir) {
-                notify('Cannot go that way');
+                notify('No going back');
                 return;
             }
         }
@@ -371,7 +373,7 @@ class Level extends Entity {
         if (nextPos.x < 0 || nextPos.x >= tilesX || nextPos.y < 0 || nextPos.y >= tilesY) {
             Luxe.camera.shake(1);
             this.events.fire('outside_bounds');
-            notify('You cannot go that way');
+            notify('Stay inside the map please');
             return;
         }
 
