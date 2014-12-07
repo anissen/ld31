@@ -36,12 +36,13 @@ class Level extends Entity {
 
     var placedLetters :Array<Letter>;
     var availableLetters :Array<Letter>;
-    // var cursor :Visual;
+    var cursor :Visual;
     var cursorPos :{ x: Int, y :Int };
     var wordStartedAt :{ x: Int, y: Int };
     var enteringWord :Bool;
     var direction :Direction;
     var currentWord :String;
+    var firstWord :Bool;
 
     public function new() {
         super({ name: 'Level' });
@@ -62,7 +63,7 @@ class Level extends Entity {
         currentWord = "";
         cursorPos = { x: 0, y: 0 };
         wordStartedAt = { x: 0, y: 0 };
-        setDirection(Right);
+        firstWord = true;
 
         grid.reset();
 
@@ -85,17 +86,20 @@ class Level extends Entity {
         var startY = 3;
         cursorPos.x = startX;
         cursorPos.y = startY;
-        // cursor = new Visual({
-        //     pos: grid.getPos(startX, startY),
-        //     color: new ColorHSV(30, 0.7, 1, 0.5), 
-        //     geometry: Luxe.draw.ngon({
-        //         sides: 3,
-        //         r: tileSize / 2,
-        //         angle: 270,
-        //         solid: true
-        //     })
-        // });
-        // cursor.geometry.vertices[2].color = new ColorHSV(60, 0.7, 1, 0.8);
+        cursor = new Visual({
+            pos: grid.getPos(startX, startY),
+            color: new ColorHSV(30, 0.7, 1, 0.5), 
+            geometry: Luxe.draw.ngon({
+                sides: 3,
+                r: tileSize / 2,
+                angle: 270,
+                solid: true
+            })
+        });
+        cursor.geometry.vertices[2].color = new ColorHSV(60, 0.7, 1, 0.8);
+
+        setDirection(Right);
+
     }
 
     function getRandomLetter() :String {
@@ -108,10 +112,16 @@ class Level extends Entity {
 
     override function onkeyup(e :KeyEvent) {
         switch (e.keycode) {
-            case Key.up:    setDirection(Up);
-            case Key.down:  setDirection(Down);
-            case Key.left:  setDirection(Left);
-            case Key.right: setDirection(Right);
+            // case Key.up:    setDirection(Up);
+            // case Key.down:  setDirection(Down);
+            // case Key.left:  setDirection(Left);
+            // case Key.right: setDirection(Right);
+            case Key.space: setDirection(switch (direction) {
+                case Up: Right;
+                case Right: Down;
+                case Down: Left;
+                case Left: Up;
+            });
             case Key.backspace: eraseLetter();
             case Key.enter: tryWord();
             case Key.escape: abortWord();
@@ -149,13 +159,13 @@ class Level extends Entity {
 
         direction = _direction;
         var angle = switch (direction) {
-            case Up:    -90;
+            case Right: 0;
             case Down:  90;
             case Left:  180;
-            case Right: 0;
-        };
-        // Actuate
-        //     .tween(cursor, 0.5, { rotation_z: angle });
+            case Up:    270;
+        }; 
+        Actuate
+            .tween(cursor, 0.5, { rotation_z: angle });
     }
 
     function findLetter(letter :String) :Null<Letter> {
@@ -187,30 +197,13 @@ class Level extends Entity {
             case Right: cursorPos.x += 1;
         };
 
-        // if direction is UP or LEFT, prepend letters instead (to get correct reading direction)
-        if (direction == Up || direction == Left) {
-            currentWord = currentWord.substr(0, currentWord.length - 1) + letter + currentWord.substr(currentWord.length - 1);
-
-            var pos = grid.getPos(cursorPos.x, cursorPos.y);
-            placedLetters[0].gridPos = { x: cursorPos.x, y: cursorPos.y };
-            Actuate
-                .tween(placedLetters[0].pos, 0.5, { x: pos.x, y: pos.y });
-            for (i in 1 ... placedLetters.length) {
-                var lastPlacedLetter = placedLetters[i - 1];
-                var placedLetter = placedLetters[i];
-                var pos = grid.getPos(lastPlacedLetter.gridPos.x, lastPlacedLetter.gridPos.y);
-                placedLetter.gridPos = { x: lastPlacedLetter.gridPos.x, y: lastPlacedLetter.gridPos.y };
-                Actuate
-                    .tween(placedLetter.pos, 0.5, { x: pos.x, y: pos.y });
-            }
-
-        } else {
-            currentWord += letter;
-            var pos = grid.getPos(cursorPos.x, cursorPos.y);
-            letterRep.gridPos = { x: cursorPos.x, y: cursorPos.y };
-            Actuate
-                .tween(letterRep.pos, 0.5, { x: pos.x, y: pos.y });
-        }
+        currentWord += letter;
+        var pos = grid.getPos(cursorPos.x, cursorPos.y);
+        letterRep.gridPos = { x: cursorPos.x, y: cursorPos.y };
+        Actuate
+            .tween(letterRep.pos, 0.5, { x: pos.x, y: pos.y });
+        Actuate
+            .tween(cursor.pos, 0.5, { x: pos.x, y: pos.y });
 
         trace('enterLetter: $currentWord');
     }
@@ -254,6 +247,12 @@ class Level extends Entity {
         
         trace('$word is a correct word!');
 
+        firstWord = false;
+
+        for (letter in placedLetters) {
+            letter.color.tween(0.5, { v: 0.3 });
+        }
+
         placedLetters = [];
         for (i in availableLetters.length ... startingLetterCount) {
             availableLetters.push(createNewLetter());
@@ -261,7 +260,8 @@ class Level extends Entity {
 
         repositionLetters();
 
-        currentWord = currentWord.substr(currentWord.length - 1); // start with the last letter of last word
+        // start with the last letter of last word
+        currentWord = currentWord.substr(currentWord.length - 1);
         stopEnteringWord();
     }
 
@@ -287,20 +287,13 @@ class Level extends Entity {
     function abortWord() {
         trace('abortWord: $currentWord');
         
-        currentWord = ""; // TODO: Don't clear entire word unless it's the first word
-        
-        /*
-        switch (direction) {
-            case Up:    currentWord.substr(currentWord.length - 1);
-            case Down:  currentWord.charAt(0);
-            case Left:  cursorPos.x -= 1;
-            case Right: cursorPos.x += 1;
-        };
-        */
+        // Start from first letter unless it's the first word
+        currentWord = (firstWord ? "" : currentWord.substr(0, 1));
+
         stopEnteringWord();
 
-        // cursor.pos = wordStartedAt.clone();
         cursorPos = { x: wordStartedAt.x, y: wordStartedAt.y };
+        cursor.pos = grid.getPos(wordStartedAt.x, wordStartedAt.y);
 
         availableLetters = availableLetters.concat(placedLetters);
         placedLetters = [];
@@ -327,20 +320,19 @@ class Level extends Entity {
 
     function startEnteringWord() {
         if (enteringWord) return;
-        // wordStartedAt = cursor.pos.clone();
         wordStartedAt = { x: cursorPos.x, y: cursorPos.y };
         enteringWord = true;
-        // Actuate
-        //     .tween(cursor.color, 0.3, { a: 0 })
-        //     .ease(Quad.easeInOut);
+        Actuate
+            .tween(cursor.color, 0.3, { a: 0 })
+            .ease(Quad.easeInOut);
     }
 
     function stopEnteringWord() {
         if (!enteringWord) return;
         enteringWord = false;
-        // Actuate
-        //     .tween(cursor.color, 0.3, { a: 1 })
-        //     .ease(Quad.easeInOut);
+        Actuate
+            .tween(cursor.color, 0.3, { a: 1 })
+            .ease(Quad.easeInOut);
     }
 
 } //Level
