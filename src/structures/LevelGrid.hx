@@ -30,6 +30,10 @@ class LevelGrid {
         grid['$x,$y'] = { x: x, y: y, pos: getPos(x, y), letter: '', hasBonus: true };
     }
 
+    public function removeCell(x :Int, y :Int) {
+        grid.remove('$x,$y');
+    }
+
     public function setLetterOnCell(x :Int, y: Int, letter: String) {
         grid['$x,$y'].letter = letter;
     }

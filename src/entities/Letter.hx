@@ -9,6 +9,8 @@ import luxe.Vector;
 class Letter extends Visual {
     var text :Text;
     public var letter (default, null) :String;
+    // public var directionFrom :Direction;
+    // public var directionTo :Direction;
     public var gridPos :{ x :Int, y :Int };
 
     public function new(_options: { pos :Vector, r :Float, color :Color, letter :String, textColor :Color, borderColor :Vector  }) {
@@ -40,5 +42,10 @@ class Letter extends Visual {
         });
 
         letter = _options.letter;
+    }
+
+    public function hide() {
+        this.visible = false;
+        text.visible = false;
     }
 }

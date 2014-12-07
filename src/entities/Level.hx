@@ -32,6 +32,7 @@ class Level extends Entity {
     var availableLetters :Array<Letter>;
     var cursor :Visual;
     var cursorPos :{ x: Int, y :Int };
+    var lastUsedDirection :Direction;
     var direction :Direction;
     var word :Word;
 
@@ -72,8 +73,39 @@ class Level extends Entity {
         });
         word.events.listen('word.correct', function(data :CorrectWordEvent) {
             for (letter in data.letters) {
-                letter.color.tween(0.5, { v: 0.3 });
+                // letter.color.tween(0.5, { v: 0.3 });
+                // letter.visible = false;
+                // if (letter == data.letters[0]) {
+                //     letter.directionFrom = lastUsedDirection;
+                // } else if (letter != data.letters[data.letters.length - 1]) {
+                //     letter.directionTo = lastUsedDirection;
+                // } else {
+                //     letter.directionFrom = direction;
+                // }
+                // letter.directionTo = direction;
+
+                if (letter != data.letters[data.letters.length - 1]) {
+                    letter.hide();
+                }
+                // var texture;
+                // var rotation;
+                // switch (direction) {
+                //     case Left: Luxe.resources.find_texture("assets/images/track_straight.png");
+                //     case Up, Down: Luxe.resources.find_texture("assets/images/track_straight.png");
+                // };
+                var bend = ((direction == Up || direction == Down) && (lastUsedDirection == Left || lastUsedDirection == Right)) || ((lastUsedDirection == Up || lastUsedDirection == Down) && (direction == Left || direction == Right));
+                var texture = (bend ? Luxe.resources.find_texture("assets/images/track_bend.png") : Luxe.resources.find_texture("assets/images/track_straight.png"));
+                new Visual({
+                    pos: new Vector(tileSize / 2, -tileSize / 2 - 2),
+                    size: new Vector(130, 130),
+                    texture: texture,
+                    rotation_z: 90,
+                    parent: letter,
+                    color: letter.color
+                });
             }
+
+            lastUsedDirection = direction;
 
             for (i in availableLetters.length ... startingLetterCount) {
                 availableLetters.push(createNewLetter());
@@ -91,12 +123,15 @@ class Level extends Entity {
         });
     }
 
-    function newLevel(start :Pos, goal :Pos) {
+    function newLevel(start :Pos, goal :Pos, removeTiles :Array<Pos>) {
         availableLetters = new Array<Letter>();
         word.reset();
         cursorPos = { x: 0, y: 0 };
 
         grid.reset();
+        for (t in removeTiles) {
+            grid.removeCell(t.x, t.y);
+        }
 
         for (cell in grid.tiles()) {
             Luxe.draw.box({
@@ -137,7 +172,7 @@ class Level extends Entity {
         // TODO: Be able to pass level data in
         var start = { x: 1, y: 3};
         var goal  = { x: tilesX - 2, y: tilesY - 2 };
-        newLevel(start, goal);
+        newLevel(start, goal, [{ x: start.x + 1, y: start.y }, { x: start.x + 1, y: start.y + 1 }]);
     }
 
     function getRandomLetter() :String {
