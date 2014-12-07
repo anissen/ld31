@@ -68,13 +68,13 @@ class Word extends Entity {
         positions = new Array<Pos>();
     }
 
-    public function reset() {
+    public function reset(resetWordList :Bool = true) {
         firstLetter = "";
         currentWord = "";
         enteringWord = false;
         letters = [];
         positions = [];
-        wordlist.reset();
+        if (resetWordList) wordlist.reset();
     }
 
     function get_word() {

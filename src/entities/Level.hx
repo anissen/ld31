@@ -38,7 +38,6 @@ class Level extends Entity {
     var availableLetters :Array<Letter>;
     var cursor :Visual;
     var cursorPos :{ x: Int, y :Int };
-    var lastUsedDirection :Direction;
     var direction :Direction;
     var word :Word;
 
@@ -147,8 +146,6 @@ class Level extends Entity {
                 };
             }
 
-            lastUsedDirection = direction;
-
             for (i in availableLetters.length ... startingLetterCount) {
                 availableLetters.push(createNewLetter());
             }
@@ -167,8 +164,14 @@ class Level extends Entity {
     }
 
     function newLevel(start :Pos, goal :Pos, removeTiles :Array<Pos>) {
+        gameOver = false;
+        
+        if (availableLetters != null) for (l in availableLetters) l.destroy();
         availableLetters = new Array<Letter>();
+
+        if (track != null) for (t in track) t.destroy();
         track = new Array<Letter>();
+
         word.reset();
         cursorPos = { x: 0, y: 0 };
 
@@ -187,6 +190,9 @@ class Level extends Entity {
             });
         }
 
+        if (infoText != null) infoText.destroy();
+        infoText = null;
+
         for (i in 0 ... startingLetterCount) {
             availableLetters.push(createNewLetter());
         }
@@ -194,6 +200,7 @@ class Level extends Entity {
 
         cursorPos.x = start.x;
         cursorPos.y = start.y;
+        if (cursor != null) cursor.destroy();
         cursor = new Visual({
             pos: grid.getPos(start.x, start.y),
             color: new ColorHSV(30, 0.7, 1, 0.5), 
@@ -213,6 +220,7 @@ class Level extends Entity {
 
         trainMoveInterval = trainInitialMoveInterval;
 
+        if (train != null) train.destroy();
         train = new Visual({
             origin: new Vector(tileSize / 2, tileSize / 2 + 20),
             size: new Vector(130, 130),
@@ -227,20 +235,17 @@ class Level extends Entity {
             moveTrain();
         });
 
-        infoText = null;
-        gameOver = false;
-
         setupParticles();
     }
 
     function setupParticles() {
-        particles = new ParticleSystem({name:'particles'});
+        if (particles != null) particles.destroy();
 
-        var t2 = Luxe.resources.find_texture('assets/particles/smoke.png');
+        particles = new ParticleSystem({name:'particles'});
 
         particles.add_emitter({
             name : 'smoke',
-            particle_image : t2,
+            particle_image : Luxe.resources.find_texture('assets/particles/smoke.png'),
             start_color: new Color(255, 255, 255, 1),
             end_color: new Color(255, 255, 255, 0),
             start_size: new Vector(16,16),
@@ -330,12 +335,25 @@ class Level extends Entity {
     }
 
     public function reset() {
-        Luxe.scene.destroy();
         init();
     }
 
     function setDirection(_direction :Direction) {
         if (word.is_entering_word()) return;
+
+        if (track.length > 0) {
+            var lastDirection = track[track.length - 1].direction;
+            var validDir = switch (_direction) {
+                case Up: lastDirection != Down;
+                case Down: lastDirection != Up;
+                case Left: lastDirection != Right;
+                case Right: lastDirection != Left;
+            };
+            if (!validDir) {
+                notify('Cannot go that way');
+                return;
+            }
+        }
 
         direction = _direction;
         setCursor(cursorPos, true);
@@ -379,7 +397,7 @@ class Level extends Entity {
         repositionLetters();
     }
 
-    function notify(text: String, info :Bool = true) {
+    function notify(text: String, warn :Bool = false) {
         var count = 0;
         for (l in availableLetters) {
             var pos = grid.getPos(count++, tilesY + 1);
@@ -392,8 +410,9 @@ class Level extends Entity {
         unique_shader.set_float('thickness', 1);
         unique_shader.set_float('smoothness', 0.8);
         unique_shader.set_float('outline', 0.75);
-        unique_shader.set_vector4('outline_color', (info ? new Vector(0.0, 0.0, 0.8, 1.0) : new Vector(0.8, 0.0, 0.0, 1.0)));
+        unique_shader.set_vector4('outline_color', (warn ? new Vector(0.8, 0.0, 0.0, 1.0) : new Vector(0.0, 0.0, 0.8, 1.0)));
 
+        if (infoText != null) infoText.destroy();
         infoText = new Text({
             pos: new Vector(Luxe.screen.w / 2, (tilesY + 1 + 0.5) * tileSize),
             text: text,
@@ -402,7 +421,7 @@ class Level extends Entity {
             color: new ColorHSV(0, 0, 1),
             align: center,
             align_vertical: center,
-            point_size: 52
+            point_size: 64
         });
         Actuate
             .tween(infoText.pos, 0.3, { y: (tilesY + 0.5) * tileSize })
