@@ -25,7 +25,7 @@ enum Direction {
 }
 
 class Cursor {
-    
+
 }
 
 class WordList {
@@ -41,58 +41,62 @@ class WordList {
         }
     }
 
-    inline function fix(word :String) {
-        return word.toLowerCase();
-    }
-
     public function isValid(word :String) {
-        return wordlist.exists(fix(word));
+        return wordlist.exists(word);
     }
 
     public function usageCount(word :String) {
-        return wordlist.get(fix(word));
+        return wordlist.get(word);
     }
 
     public function use(word :String) {
-        return wordlist.set(fix(word), usageCount(fix(word)) + 1);
+        return wordlist.set(word, usageCount(word) + 1);
     }
 }
 
+typedef Pos = {
+    x: Int,
+    y: Int
+}
 typedef StartWordEvent = { 
     word: String,
-    start: { x: Int, y: Int },
+    start: Pos,
     letters: Array<Letter> 
 };
 typedef AbortWordEvent = { 
     word: String,
-    start: { x: Int, y: Int },
+    start: Pos,
     letters: Array<Letter> 
 };
 typedef CorrectWordEvent = { 
     word: String, 
+    end: Pos,
     letters: Array<Letter> 
 };
 typedef EraseWordEvent = { 
     word: String,
+    end: Pos,
     erasedLetter: Letter
 };
 typedef WrongWordEvent = { 
     word: String, 
+    start: Pos,
     letters: Array<Letter>
 };
 typedef AlreadyUsedWordEvent = { 
     word: String, 
+    start: Pos,
     letters: Array<Letter>
 };
 
 class Word extends Entity {
-    var word :String;
-    var start :{ x: Int, y: Int };
-    var end :{ x: Int, y: Int };
+    var firstLetter :String;
+    var word (get, null) :String;
+    var positions :Array<Pos>;
     var direction :Direction;
     var wordlist :WordList;
     var letters :Array<Letter>;
-    var firstWord :Bool;
+    // var firstWord :Bool;
     var enteringWord :Bool;
 
     public function new() {
@@ -100,71 +104,87 @@ class Word extends Entity {
 
         wordlist = new WordList();
         letters = new Array<Letter>();
+        positions = new Array<Pos>();
     }
 
     public function reset() {
+        firstLetter = "";
         word = "";
-        start = null;
-        end = null;
-        firstWord = true;
         enteringWord = false;
+        letters = [];
+        positions = [];
         wordlist.reset();
     }
 
-    function startWord(_x :Int, _y: Int, _direction :Direction) {
+    function get_word() {
+        return (firstLetter + word).toLowerCase();
+    }
+
+    function startWord( _direction :Direction) {
         enteringWord = true;
-        start = { x: _x, y: _y };
         direction = _direction;
 
-        this.events.fire('word.start_word', { word: word, letters: letters, start: start });
+        this.events.fire('word.start_word', { word: word, letters: letters, start: positions[0] });
     }
 
     public function addLetter(_letter :String, _letterRep :Letter, _x :Int, _y :Int, _direction :Direction) {
         word += _letter;
         letters.push(_letterRep);
+        positions.push({ x: _x, y: _y });
 
         if (!enteringWord) {
-            startWord(_x, _y, _direction);
+            startWord(_direction);
         }
 
         trace('enterLetter: $word');
     }
 
     public function abort() {
+        if (!enteringWord) return;
+        enteringWord = false;
+
         trace('abortWord: $word');
 
-        this.events.fire('word.abort', { word: word, letters: letters, start: start });
+        this.events.fire('word.abort', { word: word, letters: letters, start: positions[0] });
 
-        // Start from first letter unless it's the first word
-        word = (firstWord ? "" : word.substr(0, 1));
+        word = "";
         letters = [];
+        positions = [];
     }
 
     public function submit() {
-        trace('tryWord: $word');
-
+        if (!enteringWord) return;
         enteringWord = false;
+
+        trace('tryWord: $word');
 
         if (!wordlist.isValid(word)) {
             trace('$word is an invalid word!');
-            this.events.fire('word.wrong', { word: word, letters: letters });
+            this.events.fire('word.wrong', { word: word, letters: letters, start: positions[0] });
+            word = "";
+            letters = [];
+            positions = [];
             return;
         }
 
         if (wordlist.usageCount(word) > 0) {
             trace('$word has already been used!');
-            this.events.fire('word.already_used', { word: word, letters: letters });
+            this.events.fire('word.already_used', { word: word, letters: letters, start: positions[0] });
+            word = "";
+            letters = [];
+            positions = [];
             return;   
         }
 
         wordlist.use(word);
-        firstWord = false;
 
-        this.events.fire('word.correct', { word: word, letters: (letters :Array<Letter>) });
+        this.events.fire('word.correct', { word: word, letters: (letters :Array<Letter>), end: positions[positions.length - 1] });
 
         // start with the last letter of last word
-        word = word.substr(word.length - 1);
+        firstLetter = word.substr(word.length - 1);
+        word = "";
         letters = [];
+        positions = [];
     }
 
     public function erase() {
@@ -175,7 +195,7 @@ class Word extends Entity {
         
         trace('erase: $word');
         word = word.substr(0, word.length - 1);
-        this.events.fire('word.erase', { erasedLetter: letters.pop() });
+        this.events.fire('word.erase', { erasedLetter: letters.pop(), end: positions.pop() });
     }
 
     public function is_entering_word() {
@@ -208,17 +228,28 @@ class Level extends Entity {
 
     function setupWordEvents() {
         word.events.listen('word.start_word', function(data :StartWordEvent) {
-            showCursor(false);
+            setCursor(data.start, false);
         });
         word.events.listen('word.wrong', function(data :WrongWordEvent) {
-            word.abort();
+            Luxe.camera.shake(10);
+            setCursor(data.start, true);
+            availableLetters = availableLetters.concat(data.letters);
+            repositionLetters();
         });
         word.events.listen('word.already_used', function(data :AlreadyUsedWordEvent) {
-            word.abort();
+            Luxe.camera.shake(10);
+            setCursor(data.start, true);
+            availableLetters = availableLetters.concat(data.letters);
+            repositionLetters();
         });
-        word.events.listen('word.abort', word_aborted);
+        word.events.listen('word.abort', function(data :AbortWordEvent) {
+            setCursor(data.start, true);
+            availableLetters = availableLetters.concat(data.letters);
+            repositionLetters();
+        });
         word.events.listen('word.erase', function(data :EraseWordEvent) {
             availableLetters.push(data.erasedLetter);
+            cursorPos = { x: data.end.x, y: data.end.y };
             repositionLetters();
         });
         word.events.listen('word.correct', function(data :CorrectWordEvent) {
@@ -230,7 +261,7 @@ class Level extends Entity {
                 availableLetters.push(createNewLetter());
             }
             repositionLetters();
-            showCursor(true);
+            setCursor(data.end, true);
         });
     }
 
@@ -351,13 +382,10 @@ class Level extends Entity {
         });
     }
 
-    function word_aborted(data :AbortWordEvent) {
-        cursorPos = { x: data.start.x, y: data.start.y };
-        cursor.pos = grid.getPos(data.start.x, data.start.y);
-        showCursor(true);
-
-        availableLetters = availableLetters.concat(data.letters);
-        repositionLetters();
+    function setCursor(pos :Pos, visible :Bool) {
+        cursorPos = { x: pos.x, y: pos.y };
+        cursor.pos = grid.getPos(pos.x, pos.y);
+        showCursor(visible);
     }
 
     function showCursor(visible :Bool) {
