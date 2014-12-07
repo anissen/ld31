@@ -5,6 +5,7 @@ import luxe.Entity;
 import luxe.Input;
 import luxe.Text;
 import luxe.tween.Actuate;
+import luxe.tween.easing.Linear;
 import luxe.tween.easing.Quad;
 import luxe.Visual;
 import phoenix.geometry.LineGeometry;
@@ -36,6 +37,12 @@ class Level extends Entity {
     var lastUsedDirection :Direction;
     var direction :Direction;
     var word :Word;
+
+    var train :Visual;
+    var trainTrackIndex :Int;
+    var trainFirstMoveInterval = 30;
+    var trainInitialMoveInterval = 15;
+    var trainMoveInterval :Int;
 
     public function new() {
         super({ name: 'Level' });
@@ -94,13 +101,11 @@ class Level extends Entity {
 
             track = track.concat(data.letters);
             for (i in 1 ... track.length) {
-                // var texture = (bend ? Luxe.resources.find_texture("assets/images/track_bend.png") : Luxe.resources.find_texture("assets/images/track_straight.png"));
                 var last = track[i - 1];
                 var t = track[i];
                 if (last.direction == t.direction) continue;
 
                 // Corner
-                // var bend = ((t.direction == Up || t.direction == Down) && (last.direction == Left || last.direction == Right)) || ((last.direction == Up || last.direction == Down) && (t.direction == Left || t.direction == Right));
                 last.track.texture = Luxe.resources.find_texture("assets/images/track_bend.png");
 
                 // Reversed because direction left means coming from the right
@@ -165,7 +170,7 @@ class Level extends Entity {
                 y: cell.pos.y - tileSize / 2,
                 w: tileSize,
                 h: tileSize,
-                color: new Color(0.2 + 0.05 * Math.random(), 0.2 + 0.05 * Math.random(), 0.2 + 0.05 * Math.random(), 1) // new ColorHSV(255 * Math.random(), 0.5, 0.5)
+                color: new Color(0.1 + 0.05 * Math.random(), 0.1 + 0.05 * Math.random(), 0.1 + 0.05 * Math.random(), 1) // new ColorHSV(255 * Math.random(), 0.5, 0.5)
             });
         }
 
@@ -192,6 +197,47 @@ class Level extends Entity {
         createStartLetter(grid.getPos(goal.x, goal.y));
 
         setDirection(Right);
+
+        trainMoveInterval = trainInitialMoveInterval;
+
+        train = new Visual({
+            origin: new Vector(tileSize / 2, tileSize / 2 - 40),
+            size: new Vector(130, 130),
+            texture: Luxe.resources.find_texture("assets/images/train.png"),
+            pos: grid.getPos(start.x, start.y),
+            color: new ColorHSV(0, 0, 1, 1)
+        });
+        trainTrackIndex = 0;
+
+        Luxe.timer.schedule(trainFirstMoveInterval, function() {
+            moveTrain();
+        });
+    }
+
+    function moveTrain() {
+        if (trainTrackIndex >= track.length) {
+            trace('You lose!');
+            return;
+        }
+        if (trainMoveInterval > 3) {
+            trainMoveInterval -= 1;
+        }
+
+        var trainTrackLetter = track[trainTrackIndex];
+        
+        var trackHSV = trainTrackLetter.color.clone().toColorHSV();
+        train.color
+            .tween(trainMoveInterval, { h: trackHSV.h, v: trackHSV.v, s: trackHSV.s })
+            .ease(Linear.easeNone);
+
+        trainTrackLetter.color
+            .tween(trainMoveInterval, { v: 1, s: 0 })
+            .ease(Linear.easeNone);
+
+        Actuate
+            .tween(train.pos, trainMoveInterval / 10, { x: trainTrackLetter.pos.x, y: trainTrackLetter.pos.y });
+        trainTrackIndex++;
+        Luxe.timer.schedule(trainMoveInterval, moveTrain);
     }
 
     override function init() {
