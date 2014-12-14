@@ -24,7 +24,6 @@ typedef AbortWordEvent = {
 typedef CorrectWordEvent = { 
     word: String, 
     end: Pos,
-    // direction: Direction,
     letters: Array<Letter> 
 };
 typedef EraseWordEvent = { 

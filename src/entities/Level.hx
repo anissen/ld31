@@ -132,7 +132,7 @@ class Level extends Entity {
         });
         word.events.listen('word.erase', function(data :EraseWordEvent) {
             availableLetters.push(data.erasedLetter);
-            setCursor(data.end, false);
+            setCursor(data.end, true);
             repositionLetters();
         });
         word.events.listen('word.correct', function(data :CorrectWordEvent) {
@@ -620,12 +620,6 @@ class Level extends Entity {
             case Key.down:  setDirection(Down);
             case Key.left:  setDirection(Left);
             case Key.right: setDirection(Right);
-            // case Key.space: setDirection(switch (direction) {
-            //     case Up: Right;
-            //     case Right: Down;
-            //     case Down: Left;
-            //     case Left: Up;
-            // });
             case Key.backspace: word.erase();
             case Key.enter: word.submit();
             case Key.escape: word.abort();

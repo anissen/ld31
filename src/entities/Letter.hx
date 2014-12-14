@@ -26,7 +26,7 @@ class Letter extends Visual {
             })
         });
 
-        var unique_shader = Luxe.renderer.shaders.bitmapfont.shader.clone(); // .font.shader.clone();
+        var unique_shader = Luxe.renderer.shaders.bitmapfont.shader.clone();
         unique_shader.set_float('thickness', 1);
         unique_shader.set_float('smoothness', 0.8);
         unique_shader.set_float('outline', 0.75);
