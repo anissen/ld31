@@ -43,7 +43,7 @@ class Level extends Entity {
     var goal :Pos;
     var viaPoints :Array<Pos>;
 
-    var train :Visual;
+    var train :Sprite;
     var trainTrackIndex :Int;
     var trainFirstMoveInterval = 30;
     var trainInitialMoveInterval = 2;
@@ -148,9 +148,7 @@ class Level extends Entity {
                     letter.hide();
                 }
                 letter.direction = direction;
-                letter.track = new Visual({
-                    origin: new Vector(tileSize / 2, tileSize / 2),
-                    size: new Vector(130, 130),
+                letter.track = new Sprite({
                     texture: Luxe.resources.find_texture("assets/images/track_straight.png"),
                     rotation_z: ((direction == Left || direction == Right) ? 90 : 0),
                     parent: letter,
@@ -292,9 +290,8 @@ class Level extends Entity {
         trainMoveInterval = trainInitialMoveInterval;
 
         if (train != null) train.destroy();
-        train = new Visual({
-            origin: new Vector(tileSize / 2, tileSize / 2 + 20),
-            size: new Vector(130, 130),
+        train = new Sprite({
+            origin: new Vector(tileSize / 2, tileSize / 2 + 15),
             texture: Luxe.resources.find_texture("assets/images/train.png"),
             pos: grid.getPos(start.x, start.y),
             color: new ColorHSV(0, 0, 1, 1)
@@ -303,6 +300,14 @@ class Level extends Entity {
 
         trainTimer = Luxe.timer.schedule((level == 0 ? trainFirstMoveInterval * 2 : trainFirstMoveInterval), function() {
             notify('Cho choo!', true);
+            Actuate
+                .tween(train, 0.8, { rotation_z: -10 })
+                .onComplete(function() {
+                    Actuate
+                        .tween(train, 0.8, { rotation_z: 10 })
+                        .reflect()
+                        .repeat();
+                });
             moveTrain();
         });
 
@@ -413,7 +418,10 @@ class Level extends Entity {
     }
 
     function setDirection(_direction :Direction) {
-        if (word.is_entering_word()) return;
+        if (word.is_entering_word()) {
+            notify('Cannot change direction now');
+            return;
+        }
 
         if (track.length > 0) {
             var lastDirection = track[track.length - 1].direction;
@@ -495,7 +503,8 @@ class Level extends Entity {
             color: new ColorHSV(0, 0, 1),
             align: center,
             align_vertical: center,
-            point_size: 64
+            point_size: 64,
+            thickness: 1
         });
         Actuate
             .tween(infoText.pos, 0.3, { y: (tilesY + 0.5) * tileSize })
