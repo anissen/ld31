@@ -96,15 +96,11 @@ class Word extends Entity {
         if (!enteringWord) {
             startWord(_direction);
         }
-
-        trace('enterLetter: $word');
     }
 
     public function abort() {
         if (!enteringWord) return;
         enteringWord = false;
-
-        trace('abortWord: $word');
 
         this.events.fire('word.abort', { word: word, letters: letters, start: positions[0] });
 
@@ -117,10 +113,7 @@ class Word extends Entity {
         if (!enteringWord) return;
         enteringWord = false;
 
-        trace('tryWord: $word');
-
         if (!wordlist.isValid(word)) {
-            trace('$word is an invalid word!');
             this.events.fire('word.wrong', { word: word, letters: letters, start: positions[0] });
             currentWord = "";
             letters = [];
@@ -129,15 +122,12 @@ class Word extends Entity {
         }
 
         if (wordlist.usageCount(word) > 0) {
-            trace('$word has already been used!');
             this.events.fire('word.already_used', { word: word, letters: letters, start: positions[0] });
             currentWord = "";
             letters = [];
             positions = [];
             return;   
         }
-
-        trace('$word is correct!');
 
         wordlist.use(word);
 
@@ -156,7 +146,6 @@ class Word extends Entity {
             return;
         }
         
-        trace('erase: $word');
         currentWord = currentWord.substr(0, currentWord.length - 1);
         this.events.fire('word.erase', { erasedLetter: letters.pop(), end: positions.pop() });
     }
