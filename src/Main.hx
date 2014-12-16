@@ -1,22 +1,25 @@
 
 import entities.Level;
 import luxe.Input;
+import luxe.States;
 import luxe.Text;
 import luxe.Vector;
 import luxe.Color;
 
 import luxe.Parcel;
 import luxe.ParcelProgress;
+import states.*;
 
 class Main extends luxe.Game {
     var level :Level;
     public static var words :Array<String>;
+    public static var states :States;
     var step :Int = 0;
     var titleText :Text;
     var introText :Text;
 
     override function ready() {
-        // Luxe.renderer.clear_color.rgb(0xfdfffc);
+        // Luxe.renderer.clear_color = new luxe.ColorHSV(0, 1, 0);
 
         var json_asset = Luxe.loadJSON("assets/parcel.json");
 
@@ -38,7 +41,15 @@ class Main extends luxe.Game {
 
         luxe.tween.Actuate.defaultEase = luxe.tween.easing.Elastic.easeOut;
 
-        var unique_shader = Luxe.renderer.shaders.bitmapfont.shader.clone(); // .font.shader.clone();
+        states = new States({ name:'state_machine' });
+        states.add(new TitleScreenState());
+        states.add(new MenuScreenState());
+        states.add(new PlayScreenState());
+
+        states.set('TitleScreenState');
+
+        /*
+        var unique_shader = Luxe.renderer.shaders.bitmapfont.shader.clone();
         unique_shader.set_float('thickness', 1);
         unique_shader.set_float('smoothness', 0.8);
         unique_shader.set_float('outline', 0.75);
@@ -65,8 +76,10 @@ class Main extends luxe.Game {
             align_vertical: center,
             point_size: 42
         });
+        */
     }
 
+    /*
     override function onkeyup(e :KeyEvent) {
         if (level != null) return;
         if (e.keycode != Key.enter) return;
@@ -148,5 +161,6 @@ class Main extends luxe.Game {
             level = new Level();
         }
     }
+    */
 
 } //Main
