@@ -22,9 +22,13 @@ import structures.LevelGrid;
 
 import entities.Word;
 
-class Cursor {
-
-}
+typedef LevelOptions = {
+    train_wait: Float,
+    train_move_interval: Float,
+    min_vowels: Int,
+    min_consonants: Int,
+    allow_repeated_words: Bool
+};
 
 class Level extends Entity {
     var letterFrequencies :LetterFrequencies;
@@ -45,9 +49,9 @@ class Level extends Entity {
 
     var train :Sprite;
     var trainTrackIndex :Int;
-    var trainFirstMoveInterval = 30;
-    var trainInitialMoveInterval = 2;
-    var trainMoveInterval :Int;
+    // var trainFirstMoveInterval = 30;
+    // var trainInitialMoveInterval = 2;
+    // var trainMoveInterval :Int;
 
     var infoText :Text;
 
@@ -56,6 +60,8 @@ class Level extends Entity {
     var particles :ParticleSystem;
 
     var trainTimer :snow.utils.Timer;
+
+    var levelOptions :LevelOptions;
 
     var level :Int;
     var levels = [
@@ -97,8 +103,10 @@ class Level extends Entity {
         }
     ];
 
-    public function new() {
+    public function new(_options: LevelOptions) {
         super({ name: 'Level' });
+
+        levelOptions = _options;
 
         letterFrequencies = new LetterFrequencies();
         grid = new LevelGrid(tilesX, tilesY, tileSize);
@@ -287,8 +295,6 @@ class Level extends Entity {
 
         setDirection(Right);
 
-        trainMoveInterval = trainInitialMoveInterval;
-
         if (train != null) train.destroy();
         train = new Sprite({
             origin: new Vector(tileSize / 2, tileSize / 2 + 15),
@@ -298,7 +304,7 @@ class Level extends Entity {
         });
         trainTrackIndex = 0;
 
-        trainTimer = Luxe.timer.schedule((level == 0 ? trainFirstMoveInterval * 2 : trainFirstMoveInterval), function() {
+        trainTimer = Luxe.timer.schedule((level == 0 ? levelOptions.train_wait * 2 : levelOptions.train_wait), function() {
             notify('Cho choo!', true);
             Actuate
                 .tween(train, 0.8, { rotation_z: -10 })
@@ -368,22 +374,22 @@ class Level extends Entity {
 
         particles.start();
 
+        var moveInterval = levelOptions.train_move_interval;
         var trainTrackLetter = track[trainTrackIndex];
-        
         var trackHSV = trainTrackLetter.color.clone().toColorHSV();
         train.color
-            .tween(trainMoveInterval, { h: trackHSV.h, v: trackHSV.v, s: trackHSV.s })
+            .tween(moveInterval, { h: trackHSV.h, v: trackHSV.v, s: trackHSV.s })
             .ease(Linear.easeNone);
 
         trainTrackLetter.color
-            .tween(trainMoveInterval, { v: 1, s: 0 })
+            .tween(moveInterval, { v: 1, s: 0 })
             .ease(Linear.easeNone);
 
         Actuate
-            .tween(train.pos, trainMoveInterval, { x: trainTrackLetter.pos.x, y: trainTrackLetter.pos.y })
+            .tween(train.pos, moveInterval, { x: trainTrackLetter.pos.x, y: trainTrackLetter.pos.y })
             .ease(Linear.easeNone);
         trainTrackIndex++;
-        Luxe.timer.schedule(trainMoveInterval, moveTrain);
+        Luxe.timer.schedule(moveInterval, moveTrain);
     }
 
     override function init() {
@@ -392,9 +398,9 @@ class Level extends Entity {
     }
 
     function getRandomLetter() :String {
-        if (vowelCount() < 3) {
+        if (vowelCount() < levelOptions.min_vowels) {
             return letterFrequencies.randomVowel();
-        } else if (consonantCount() < 5) {
+        } else if (consonantCount() < levelOptions.min_consonants) {
             return letterFrequencies.randomConsonant();
         }
         return letterFrequencies.randomLetter();
@@ -621,7 +627,7 @@ class Level extends Entity {
             case Key.left:  setDirection(Left);
             case Key.right: setDirection(Right);
             case Key.backspace: word.erase();
-            case Key.enter: word.submit();
+            case Key.enter: word.submit(levelOptions.allow_repeated_words);
             case Key.escape: word.abort();
             case Key.key_a: enterLetter("A");
             case Key.key_b: enterLetter("B");

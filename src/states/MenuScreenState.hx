@@ -50,7 +50,7 @@ class Button extends Text {
             uv: new Rectangle(0, 0, Luxe.screen.w * (128/80), 128),
             size: new Vector(width, height),
             origin: new Vector(width / 2, height / 2),
-            color: new Color(255, 255, 255, 0.1)
+            color: new Color(255, 255, 255, 0.05)
         });
         background.texture.clamp = repeat;
     }
@@ -66,10 +66,10 @@ class Button extends Text {
 
         if (!mouse_over && Luxe.utils.geometry.point_in_geometry(e.pos, background.geometry)) {
             mouse_over = true;
-            background.color.tween(0.5, { a: 0.6 }).ease(luxe.tween.easing.Quad.easeInOut);
+            background.color.tween(0.5, { a: 0.4 }).ease(luxe.tween.easing.Quad.easeInOut);
         } else if (mouse_over && !Luxe.utils.geometry.point_in_geometry(e.pos, background.geometry)) {
             mouse_over = false;
-            background.color.tween(0.5, { a: 0.1 }).ease(luxe.tween.easing.Quad.easeInOut);
+            background.color.tween(0.5, { a: 0.05 }).ease(luxe.tween.easing.Quad.easeInOut);
         }
     }
 
@@ -115,26 +115,38 @@ class MenuScreenState extends State {
             parent: background
         });
 
-        var buttonOptions = [
+        var buttonOptions :Array<{ text :String, description :String, options :entities.Level.LevelOptions }> = [
         {
             text: 'Easy',
             description: 'Slow train, letters easier to match',
             options: {
-
+                train_wait: 60,
+                train_move_interval: 5,
+                min_vowels: 4,
+                min_consonants: 6,
+                allow_repeated_words: true
             }
         },
         {
             text: 'Medium',
             description: '',
             options: {
-                
+                train_wait: 30,
+                train_move_interval: 3,
+                min_vowels: 3,
+                min_consonants: 5,
+                allow_repeated_words: false
             }
         },
         {
             text: 'Hard',
             description: 'Faster train, no help with letters',
             options: {
-                
+                train_wait: 15,
+                train_move_interval: 1.5,
+                min_vowels: 0,
+                min_consonants: 0,
+                allow_repeated_words: false
             }
         }];
         var yPos = 250;
@@ -144,17 +156,19 @@ class MenuScreenState extends State {
                 pos: new Vector(Luxe.screen.w / 2, yPos), 
                 size: new Vector(Luxe.screen.w, 50),
                 scene: scene,
-                callback: play.bind(opts.options)
+                callback: function () {
+                    Main.states.set('PlayScreenState', opts.options);
+                }
             });
             button.transform.parent = background.transform;
 
-            yPos += 100;
+            yPos += 90;
         }
 
         Actuate.tween(background.pos, 0.5, { x: 0 });
     }
 
-    function play(options) {
+    function play(options :entities.Level.LevelOptions) {
         Main.states.set('PlayScreenState', options);
     }
 

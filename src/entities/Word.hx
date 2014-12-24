@@ -108,7 +108,7 @@ class Word extends Entity {
         positions = [];
     }
 
-    public function submit() {
+    public function submit(allow_reuse_words :Bool) {
         if (!enteringWord) return;
         enteringWord = false;
 
@@ -120,7 +120,7 @@ class Word extends Entity {
             return;
         }
 
-        if (wordlist.usageCount(word) > 0) {
+        if (!allow_reuse_words && wordlist.usageCount(word) > 0) {
             this.events.fire('word.already_used', { word: word, letters: letters, start: positions[0] });
             currentWord = "";
             letters = [];

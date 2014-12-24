@@ -36,7 +36,7 @@ class PlayScreenState extends State {
         //     },
         //     scene: scene    
         // });
-        level = new Level();
+        level = new Level(cast _value);
     }
 
     override function onleave<T>(_value :T) {
