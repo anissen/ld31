@@ -146,6 +146,8 @@ class Level extends Entity {
         word.events.listen('word.correct', function(data :CorrectWordEvent) {
             if (gameOver) return;
 
+            trace('Correct word "${data.word}"! Score: ${letterFrequencies.getScore(data.word)}');
+
             if (track.length > 0) {
                 track[track.length - 1].hide();
             }
