@@ -1,6 +1,7 @@
 
 package states;
 
+import components.Gradient;
 import luxe.Color;
 import luxe.Component;
 import luxe.Entity;
@@ -15,16 +16,44 @@ import luxe.Vector;
 import luxe.Visual;
 import luxe.Input;
 
-typedef ButtonOptions = {
+typedef TrainTextOptions = {
 
     > luxe.options.TextOptions,
 
         /** Callback on click */
-    @:optional var callback :Void -> Void;
-
+    @:optional var borderColor :Color;
 }
 
-class Button extends Text {
+typedef ButtonOptions = {
+
+    > TrainTextOptions,
+
+    /** Callback on click */
+    @:optional var callback :Void -> Void;
+}
+
+class TrainText extends Text {
+    public function new(_options: TrainTextOptions) {
+        var options = _options;
+        if (options.align == null) options.align = TextAlign.center;
+        if (options.align_vertical == null) options.align_vertical = TextAlign.center;
+        if (options.point_size == null) options.point_size = 42;
+        if (options.font == null) options.font = Luxe.resources.find_font("rail");
+        if (options.borderColor == null) options.borderColor = new Color(0, 0, 0, 1);
+        if (options.shader == null) {
+            var unique_shader = Luxe.renderer.shaders.bitmapfont.shader.clone();
+            unique_shader.set_float('thickness', 1);
+            unique_shader.set_float('smoothness', 0.8);
+            unique_shader.set_float('outline', 0.75);
+            unique_shader.set_vector4('outline_color', new Vector(options.borderColor.r, options.borderColor.g, options.borderColor.b, options.borderColor.a));
+            options.shader = unique_shader;
+        }
+
+        super(options);
+    }
+}
+
+class Button extends TrainText {
     var callback :Void -> Void;
     var background :Sprite;
     var height :Float;
@@ -32,14 +61,10 @@ class Button extends Text {
     var mouse_over :Bool = false;
 
     public function new(_options: ButtonOptions) {
-        var options = _options;
-        if (options.align == null) options.align = TextAlign.center;
-        if (options.align_vertical == null) options.align_vertical = TextAlign.center;
-        if (options.point_size == null) options.point_size = 32;
         height = 80;
         width = Luxe.screen.w;
 
-        super(options);
+        super(_options);
         callback = _options.callback;
     }
 
@@ -50,7 +75,7 @@ class Button extends Text {
             uv: new Rectangle(0, 0, Luxe.screen.w * (128/80), 128),
             size: new Vector(width, height),
             origin: new Vector(width / 2, height / 2),
-            color: new Color(255, 255, 255, 0.05)
+            color: new Color(255, 255, 255, 0.02)
         });
         background.texture.clamp = repeat;
     }
@@ -66,10 +91,10 @@ class Button extends Text {
 
         if (!mouse_over && Luxe.utils.geometry.point_in_geometry(e.pos, background.geometry)) {
             mouse_over = true;
-            background.color.tween(0.5, { a: 0.4 }).ease(luxe.tween.easing.Quad.easeInOut);
+            background.color.tween(0.3, { a: 0.1 }).ease(luxe.tween.easing.Quad.easeInOut);
         } else if (mouse_over && !Luxe.utils.geometry.point_in_geometry(e.pos, background.geometry)) {
             mouse_over = false;
-            background.color.tween(0.5, { a: 0.05 }).ease(luxe.tween.easing.Quad.easeInOut);
+            background.color.tween(0.3, { a: 0.02 }).ease(luxe.tween.easing.Quad.easeInOut);
         }
     }
 
@@ -104,18 +129,19 @@ class MenuScreenState extends State {
             color: new ColorHSV(200, 1, 0.1),
             scene: scene
         });
+        background.add(new Gradient(new ColorHSV(200, 1, 0.2), new Color(0, 0, 0, 1)));
 
-        titleText = new Text({
+        titleText = new TrainText({
             pos: new Vector(Luxe.screen.w / 2, 100),
             text: 'Train of Thought',
             align: TextAlign.center,
             align_vertical: TextAlign.center,
-            point_size: 46,
+            point_size: 64,
             scene: scene,
             parent: background
         });
 
-        var buttonOptions :Array<{ text :String, description :String, options :entities.Level.LevelOptions }> = [
+        var buttonOptions = [
         {
             text: 'Easy',
             description: 'Slow train, letters easier to match',
@@ -125,7 +151,8 @@ class MenuScreenState extends State {
                 min_vowels: 4,
                 min_consonants: 6,
                 allow_repeated_words: true
-            }
+            },
+            borderColor: new Color(0, 0.5, 0, 1)
         },
         {
             text: 'Medium',
@@ -136,7 +163,8 @@ class MenuScreenState extends State {
                 min_vowels: 3,
                 min_consonants: 5,
                 allow_repeated_words: false
-            }
+            },
+            borderColor: new Color(0, 0, 0.5, 1)
         },
         {
             text: 'Hard',
@@ -147,7 +175,8 @@ class MenuScreenState extends State {
                 min_vowels: 0,
                 min_consonants: 0,
                 allow_repeated_words: false
-            }
+            },
+            borderColor: new Color(0.5, 0, 0, 1)
         }];
         var yPos = 250;
         for (opts in buttonOptions) {
@@ -156,6 +185,7 @@ class MenuScreenState extends State {
                 pos: new Vector(Luxe.screen.w / 2, yPos), 
                 size: new Vector(Luxe.screen.w, 50),
                 scene: scene,
+                borderColor: opts.borderColor,
                 callback: function () {
                     Main.states.set('PlayScreenState', opts.options);
                 }
