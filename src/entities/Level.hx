@@ -313,6 +313,7 @@ class Level extends Entity {
                 .onComplete(function() {
                     Actuate
                         .tween(train, 0.8, { rotation_z: 10 })
+                        .reverse()
                         .reflect()
                         .repeat();
                 });
