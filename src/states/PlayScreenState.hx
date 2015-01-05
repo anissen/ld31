@@ -44,8 +44,11 @@ class PlayScreenState extends State {
         scene.empty();    
     }
 
+
     // override function onkeyup(e :KeyEvent) {
-    //     if (e.keycode != Key.enter) return;
-    //     Main.states.set('PlayScreenState');
+    //     if (e.keycode == Key.space) {
+    //         speechBubble.show('hello world');
+    //     }
+    //     // Main.states.set('PlayScreenState');
     // }
 }

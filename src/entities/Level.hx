@@ -21,6 +21,7 @@ import structures.LetterFrequencies;
 import structures.LevelGrid;
 
 import entities.Word;
+import entities.SpeechBubble;
 
 typedef LevelOptions = {
     train_wait: Float,
@@ -62,6 +63,8 @@ class Level extends Entity {
     var trainTimer :snow.utils.Timer;
 
     var levelOptions :LevelOptions;
+
+    var speechBubble :SpeechBubble;
 
     var level :Int;
     var levels = [
@@ -304,19 +307,26 @@ class Level extends Entity {
             pos: grid.getPos(start.x, start.y),
             color: new ColorHSV(0, 0, 1, 1)
         });
+        speechBubble = new SpeechBubble(train);
+
         trainTrackIndex = 0;
 
-        trainTimer = Luxe.timer.schedule((level == 0 ? levelOptions.train_wait * 2 : levelOptions.train_wait), function() {
-            notify('Cho choo!', true);
+        var departing_in = (level == 0 ? levelOptions.train_wait * 2 : levelOptions.train_wait);
+
+        Luxe.timer.schedule(departing_in - 5, function() {
+            speechBubble.show("Departing!", 3);
+        });
+
+        trainTimer = Luxe.timer.schedule(departing_in, function() {
+            // notify('Cho choo!', true);
+            speechBubble.show("Cho choo!");
+
+            train.rotation_z = -10;
             Actuate
-                .tween(train, 0.8, { rotation_z: -10 })
-                .onComplete(function() {
-                    Actuate
-                        .tween(train, 0.8, { rotation_z: 10 })
-                        .reverse()
-                        .reflect()
-                        .repeat();
-                });
+                .tween(train, 0.8, { rotation_z: 10 })
+                .reverse()
+                .reflect()
+                .repeat();
             moveTrain();
         });
 
