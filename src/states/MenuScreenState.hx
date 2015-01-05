@@ -75,7 +75,7 @@ class Button extends TrainText {
             uv: new Rectangle(0, 0, Luxe.screen.w * (128/80), 128),
             size: new Vector(width, height),
             origin: new Vector(width / 2, height / 2),
-            color: new Color(255, 255, 255, 0.02)
+            color: new Color(Colors.sand.r, Colors.sand.g, Colors.sand.b, 0.02)
         });
         background.texture.clamp = repeat;
     }
@@ -129,7 +129,7 @@ class MenuScreenState extends State {
             color: new ColorHSV(200, 1, 0.1),
             scene: scene
         });
-        background.add(new Gradient(new ColorHSV(200, 1, 0.2), new Color(0, 0, 0, 1)));
+        background.add(new Gradient(Colors.hills, Colors.hat));
 
         titleText = new TrainText({
             pos: new Vector(Luxe.screen.w / 2, 100),
