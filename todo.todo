@@ -6,20 +6,13 @@ To-do:
 
     Post-compo:
     ☐ Title screen
-    ☐ Menu screen
-    ✔ Difficulty modes; easy, medium, hard @done (30-12-14 21:45)
     ☐ Scores
-    ☐ Bloom effect
     ☐ Sounds
     ☐ Music
     ☐ More interesting background
-    ☐ Using States & Screens
     ☐ Animate track placement
     ☐ Color the smoke
-    ☐ Make train say "Cho choo!" instead of using notify
-    ☐ Train departure countdown?
     ☐ Three lives before dying
-    ☐ Fix: Erasing down to zero letters should allow direction change
     ☐ Support touch controls
 
     Generel:
