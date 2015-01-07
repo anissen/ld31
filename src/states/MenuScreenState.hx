@@ -75,7 +75,7 @@ class Button extends TrainText {
             uv: new Rectangle(0, 0, Luxe.screen.w * (128/80), 128),
             size: new Vector(width, height),
             origin: new Vector(width / 2, height / 2),
-            color: new Color(Colors.sand.r, Colors.sand.g, Colors.sand.b, 0.02)
+            color: new Color(Colors.hills.r, Colors.hills.g, Colors.hills.b, 0.02)
         });
         background.texture.clamp = repeat;
     }

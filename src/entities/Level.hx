@@ -156,6 +156,7 @@ class Level extends Entity {
             }
             
             var isVia = false;
+            var count = 0;
             for (letter in data.letters) {
                 if (letter != data.letters[data.letters.length - 1]) {
                     letter.hide();
@@ -165,8 +166,10 @@ class Level extends Entity {
                     texture: Luxe.resources.find_texture("assets/images/track_straight.png"),
                     rotation_z: ((direction == Left || direction == Right) ? 90 : 0),
                     parent: letter,
-                    color: letter.color
+                    color: letter.color,
+                    scale: new Vector(0.1, 0.1)
                 });
+                Actuate.tween(letter.track.scale, 0.3, { x: 1, y: 1}).delay(0.1 * count++);
 
                 var viaPointsToRemove = [];
                 for (via in viaPoints) {
@@ -261,7 +264,7 @@ class Level extends Entity {
                 y: cell.pos.y - tileSize / 2,
                 w: tileSize,
                 h: tileSize,
-                color: new Color(0.1 + 0.05 * Math.random(), 0.1 + 0.05 * Math.random(), 0.1 + 0.05 * Math.random(), 1) // new ColorHSV(255 * Math.random(), 0.5, 0.5)
+                color: new Color(Colors.sand.r, Colors.sand.g, Colors.sand.b, 0.2 + 0.1 * Math.random())
             });
         }
 
@@ -317,10 +320,11 @@ class Level extends Entity {
             speechBubble.show("Departing!", 3);
         });
 
-        trainTimer = Luxe.timer.schedule(departing_in, function() {
-            // notify('Cho choo!', true);
+        Luxe.timer.schedule(departing_in - 1, function() {
             speechBubble.show("Cho choo!");
+        });
 
+        trainTimer = Luxe.timer.schedule(departing_in, function() {
             train.rotation_z = -10;
             Actuate
                 .tween(train, 0.8, { rotation_z: 10 })
